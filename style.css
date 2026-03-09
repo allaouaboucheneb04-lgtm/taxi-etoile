@@ -357,3 +357,52 @@ body.theme-taxi { background: #FFF8E1; color: #333; }
 .dashboard-topbar p {
   margin: 0.3rem 0 0;
 }
+
+
+/* =======================
+   PWA / IPHONE APP MODE
+   ======================= */
+html {
+  background: #FFF8E1;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.standalone-app {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.standalone-app header.hero {
+  padding-top: calc(1.2rem + env(safe-area-inset-top));
+}
+
+.standalone-app .install-btn {
+  bottom: calc(15px + env(safe-area-inset-bottom));
+}
+
+#iosBanner {
+  bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 700px) {
+  header.hero nav.menu {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  header.hero nav.menu a {
+    text-align: center;
+    background: rgba(255,255,255,0.22);
+  }
+
+  .container,
+  .dashboard-wrapper {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}

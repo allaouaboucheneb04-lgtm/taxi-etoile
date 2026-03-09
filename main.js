@@ -92,7 +92,8 @@ function initThemeAndPwa() {
   }
 
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
+  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || (('standalone' in window.navigator) && window.navigator.standalone);
+  document.body.classList.toggle('standalone-app', !!isInStandaloneMode);
   const iosBanner = document.getElementById('iosBanner');
   if (iosBanner && isIos && !isInStandaloneMode) {
     iosBanner.style.display = 'block';
@@ -101,7 +102,7 @@ function initThemeAndPwa() {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
   }
 }
 
