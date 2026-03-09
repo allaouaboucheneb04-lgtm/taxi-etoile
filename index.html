@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taxi Étoile - Réservation</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFCA28">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<header class="hero">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="#FFD700" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 .587l3.668 7.431 8.21 1.194-5.938 5.788 1.402 8.172L12 18.896l-7.342 3.856 1.402-8.172L.122 9.212l8.21-1.194z"/>
+    </svg>
+    <h1>Taxi Étoile</h1>
+  </div>
+
+  <nav class="menu">
+    <a href="index.html" class="active">Réservation</a>
+    <a href="admin.html">Dashboard</a>
+    <a href="tarifs.html">Tarifs</a>
+    <a href="services.html">Services</a>
+    <a href="a-propos.html">À propos</a>
+    <a href="contact.html">Contact</a>
+    <a href="faq.html">FAQ</a>
+    <a href="galerie.html">Galerie</a>
+    <a href="politique-confidentialite.html">Confidentialité</a>
+    <a href="conditions.html">Conditions</a>
+  </nav>
+
+  <select id="themeSelector" class="theme-btn">
+    <option value="glass">Glassmorphism</option>
+    <option value="dark">Neon Dark</option>
+    <option value="material">Material Design</option>
+    <option value="simple">Minimaliste</option>
+    <option value="taxi">Taxi Branding</option>
+  </select>
+
+  <p>Réservez votre taxi en quelques secondes</p>
+</header>
+
+<div class="container">
+  <h2>Réservation</h2>
+
+  <form id="reservationForm">
+    <div class="input-group">
+      <i class="fa fa-user"></i>
+      <input type="text" id="nom" name="nom" placeholder="Votre nom" required>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-phone"></i>
+      <input type="tel" id="telephone" name="telephone" placeholder="514-123-4567" required>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-envelope"></i>
+      <input type="email" id="email" name="email" placeholder="Votre email" required>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-users"></i>
+      <input type="number" name="passagers" id="passagers" placeholder="Nombre de personnes" min="1" value="1" required>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-plane"></i>
+      <input type="text" id="numeroVol" name="numero_vol" placeholder="Numéro de vol (optionnel)">
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-map-marker-alt"></i>
+      <div style="width:100%; position:relative;">
+        <input type="text" id="depart" name="depart" placeholder="Adresse de départ" required autocomplete="off">
+        <div id="depart-results" class="autocomplete"></div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-map-marker-alt"></i>
+      <div style="width:100%; position:relative;">
+        <input type="text" id="arrivee" name="arrivee" placeholder="Adresse d'arrivée" required autocomplete="off">
+        <div id="arrivee-results" class="autocomplete"></div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-clock"></i>
+      <input type="datetime-local" id="heure" name="heure" required>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-car"></i>
+      <select name="vehicule" id="vehicule">
+        <option value="berline">Berline</option>
+        <option value="van">Van</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-suitcase"></i>
+      <input type="number" name="valises" id="valises" placeholder="Nombre de valises" min="0" value="0">
+    </div>
+
+    <div class="input-group textarea-group">
+      <i class="fa fa-note-sticky"></i>
+      <textarea id="notes" name="notes" rows="4" placeholder="Notes / instructions pour le chauffeur : terminal, porte, siège bébé, bagages spéciaux..."></textarea>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-exchange-alt"></i>
+      <label class="checkbox-line">
+        <input type="checkbox" id="allerRetour" name="aller_retour" value="oui">
+        Réserver un aller-retour
+      </label>
+    </div>
+
+    <div id="retourFields" class="hidden retour-box">
+      <h3>Informations retour</h3>
+
+      <div class="input-group">
+        <i class="fa fa-map-marker-alt"></i>
+        <div style="width:100%; position:relative;">
+          <input type="text" id="retourDepart" name="retour_depart" placeholder="Adresse de départ retour" autocomplete="off">
+          <div id="retour-depart-results" class="autocomplete"></div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <i class="fa fa-map-marker-alt"></i>
+        <div style="width:100%; position:relative;">
+          <input type="text" id="retourArrivee" name="retour_arrivee" placeholder="Adresse d'arrivée retour" autocomplete="off">
+          <div id="retour-arrivee-results" class="autocomplete"></div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <i class="fa fa-clock"></i>
+        <input type="datetime-local" id="retourHeure" name="retour_heure">
+      </div>
+
+      <div class="input-group">
+        <i class="fa fa-plane"></i>
+        <input type="text" id="retourNumeroVol" name="retour_numero_vol" placeholder="Numéro de vol retour (optionnel)">
+      </div>
+
+      <div class="input-group textarea-group">
+        <i class="fa fa-comment"></i>
+        <textarea id="retourDetails" name="retour_details" rows="4" placeholder="Infos utiles retour : terminal, porte, heure d'atterrissage, lieu de rencontre..."></textarea>
+      </div>
+    </div>
+
+    <button type="submit" id="submitBtn">Réserver maintenant</button>
+    <p id="confirmation" class="hidden success-message"></p>
+  </form>
+</div>
+
+<button id="installBtn" class="install-btn" style="display:none;">📲 Ajouter à l'écran d'accueil</button>
+
+<div id="iosBanner" style="display:none; position:fixed; bottom:10px; left:10px; right:10px; background:#FFCA28; color:#333; padding:10px; border-radius:10px; text-align:center; z-index:9999; font-weight:700;">
+  Pour ajouter Taxi Étoile à votre écran d'accueil : <br>
+  <span style="font-size:14px;">Appuyez sur le bouton Partager puis "Ajouter à l'écran d'accueil"</span>
+  <button id="closeIosBanner" style="margin-left:10px; padding:5px 10px;">OK</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
