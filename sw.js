@@ -1,4 +1,4 @@
-const CACHE_NAME = 'taxi-etoile-v2';
+const CACHE_NAME = 'taxi-etoile-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const ASSETS_TO_CACHE = [
   './chauffeurs.html',
   './politique-confidentialite.html',
   './conditions.html',
+  './404.html',
   './style.css',
   './main.js',
   './firebase-config.js',
