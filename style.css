@@ -406,3 +406,139 @@ body {
     padding-right: max(1rem, env(safe-area-inset-right));
   }
 }
+
+.secondary-btn {
+  background: #424242;
+  color: #fff;
+}
+
+.secondary-btn:hover {
+  background: #2f2f2f;
+}
+
+.danger-btn {
+  background: #d32f2f;
+  color: #fff;
+}
+
+.danger-btn:hover {
+  background: #b71c1c;
+}
+
+.small-btn {
+  width: auto;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+}
+
+.reservation-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.reservation-card {
+  border: 1px solid #ffe082;
+  border-radius: 14px;
+  padding: 1rem;
+  background: #fffdf3;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.reservation-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.reservation-header p {
+  margin-top: 6px;
+  color: #666;
+}
+
+.reservation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.status-select,
+.driver-select,
+.driver-status-select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid #FFC107;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.retour-summary {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #e0c15b;
+}
+
+.filters-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 1rem 0;
+}
+
+.dashboard-actions {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 1rem;
+}
+
+.drivers-panel {
+  border: 1px solid #ffe082;
+  border-radius: 14px;
+  padding: 1rem;
+  margin: 1rem 0;
+  background: #fffdf3;
+}
+
+.drivers-panel-header {
+  margin-bottom: 0.75rem;
+}
+
+.driver-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.driver-mini-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.driver-mini-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: #fff;
+  border: 1px solid #ffe082;
+  border-radius: 12px;
+}
+
+.driver-mini-card p {
+  margin: 4px 0 0;
+  color: #666;
+}
+
+@media (max-width: 700px) {
+  .reservation-header,
+  .driver-mini-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .small-btn {
+    width: 100%;
+  }
+}

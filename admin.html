@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Taxi Étoile - Dashboard</title>
+<title>Taxi Étoile - Dashboard Dispatch</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#FFCA28">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,9 +26,10 @@
   </div>
   <nav class="menu">
     <a href="index.html">Réservation</a>
-    <a href="admin.html" class="active">Dashboard</a>
+    <a href="admin.html" class="active">Dispatch Admin</a>
+    <a href="chauffeurs.html">Espace chauffeur</a>
   </nav>
-  <p>Connexion Firebase admin et suivi des réservations</p>
+  <p>Connexion admin Firebase, dispatch chauffeur et suivi des réservations</p>
 </header>
 
 <div class="dashboard-wrapper">
@@ -44,7 +45,7 @@
   <section class="dashboard-card hidden" id="dashboardCard">
     <div class="dashboard-topbar">
       <div>
-        <h2>Réservations</h2>
+        <h2>Dispatch des réservations</h2>
         <p class="small-muted">Dashboard Firebase en temps réel</p>
         <p class="small-muted" id="adminBadge"></p>
         <p class="small-muted" id="syncStatus">Connexion en cours…</p>
@@ -57,6 +58,25 @@
       <div class="stat-box"><span>Aller-retour</span><strong id="statRoundTrip">0</strong></div>
       <div class="stat-box"><span>Aujourd'hui</span><strong id="statToday">0</strong></div>
       <div class="stat-box"><span>En attente</span><strong id="statPending">0</strong></div>
+      <div class="stat-box"><span>Assignées</span><strong id="statAssigned">0</strong></div>
+      <div class="stat-box"><span>Chauffeurs actifs</span><strong id="statDrivers">0</strong></div>
+    </div>
+
+    <div class="drivers-panel">
+      <div class="drivers-panel-header">
+        <div>
+          <h3>Chauffeurs</h3>
+          <p class="small-muted">Ajoute les chauffeurs disponibles pour les assignations.</p>
+        </div>
+      </div>
+      <form id="driverForm" class="driver-form-grid">
+        <div class="input-group"><i class="fa fa-user"></i><input type="text" id="driverName" placeholder="Nom du chauffeur" required></div>
+        <div class="input-group"><i class="fa fa-phone"></i><input type="text" id="driverPhone" placeholder="Téléphone" required></div>
+        <div class="input-group"><i class="fa fa-car"></i><input type="text" id="driverCar" placeholder="Voiture / plaque" required></div>
+        <button type="submit" id="saveDriverBtn">Ajouter chauffeur</button>
+      </form>
+      <p id="driverMsg" class="hidden"></p>
+      <div id="driversList" class="driver-mini-list"></div>
     </div>
 
     <div class="filters-grid">
@@ -72,6 +92,7 @@
         <select id="statusFilter">
           <option value="all">Tous statuts</option>
           <option value="en_attente">En attente</option>
+          <option value="assignee">Assignée</option>
           <option value="confirmee">Confirmée</option>
           <option value="en_cours">En cours</option>
           <option value="terminee">Terminée</option>

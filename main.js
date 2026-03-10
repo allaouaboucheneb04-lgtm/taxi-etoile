@@ -1,12 +1,18 @@
 const ADMINS_COLLECTION = 'admins';
 const RESERVATIONS_COLLECTION = 'reservations';
+const DRIVERS_COLLECTION = 'drivers';
 
 let db = null;
 let auth = null;
 let reservationsCache = [];
+let driversCache = [];
+let driverReservationsCache = [];
 let unsubscribeReservations = null;
+let unsubscribeDrivers = null;
+let unsubscribeDriverReservations = null;
 let currentUser = null;
 let currentAdminDoc = null;
+let currentDriverDoc = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -98,7 +104,7 @@ function initThemeAndPwa() {
   if (iosBanner && isIos && !isInStandaloneMode) {
     iosBanner.style.display = 'block';
     const closeBtn = document.getElementById('closeIosBanner');
-    if (closeBtn) closeBtn.addEventListener('click', () => iosBanner.style.display = 'none');
+    if (closeBtn) closeBtn.addEventListener('click', () => { iosBanner.style.display = 'none'; });
   }
 
   if ('serviceWorker' in navigator) {
@@ -235,6 +241,8 @@ function initReservationPage() {
       retourNumeroVol: document.getElementById('retourNumeroVol')?.value?.trim() || '',
       retourDetails: document.getElementById('retourDetails')?.value?.trim() || '',
       status: 'en_attente',
+      driverId: '',
+      driverName: '',
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAtClient: new Date().toISOString(),
       source: 'site-web'
@@ -260,8 +268,66 @@ function initReservationPage() {
 function reservationSearchBlob(item) {
   return [
     item.nom, item.telephone, item.email, item.numeroVol, item.depart, item.arrivee,
-    item.notes, item.retourNumeroVol, item.retourDepart, item.retourArrivee, item.status
+    item.notes, item.retourNumeroVol, item.retourDepart, item.retourArrivee, item.status,
+    item.driverName
   ].join(' ').toLowerCase();
+}
+
+function statusLabel(status) {
+  const labels = {
+    en_attente: 'En attente',
+    assignee: 'Assignée',
+    confirmee: 'Confirmée',
+    en_cours: 'En cours',
+    terminee: 'Terminée',
+    annulee: 'Annulée'
+  };
+  return labels[status] || status || 'En attente';
+}
+
+function driverOptionsHtml(selectedId = '') {
+  const activeDrivers = driversCache.filter((driver) => driver.active !== false);
+  const base = '<option value="">Choisir un chauffeur</option>';
+  return base + activeDrivers.map((driver) => `
+    <option value="${escapeHtml(driver.id)}" ${driver.id === selectedId ? 'selected' : ''}>${escapeHtml(driver.name || 'Sans nom')} • ${escapeHtml(driver.phone || '')}</option>
+  `).join('');
+}
+
+function renderDriversMiniList() {
+  const list = document.getElementById('driversList');
+  if (!list) return;
+  if (!driversCache.length) {
+    list.innerHTML = '<p class="small-muted">Aucun chauffeur ajouté.</p>';
+    return;
+  }
+
+  list.innerHTML = driversCache.map((driver) => `
+    <div class="driver-mini-card">
+      <div>
+        <strong>${escapeHtml(driver.name || 'Sans nom')}</strong>
+        <p>${escapeHtml(driver.phone || '—')} • ${escapeHtml(driver.car || '—')}</p>
+      </div>
+      <button class="secondary-btn small-btn toggle-driver-btn" data-driver-id="${escapeHtml(driver.id)}" data-driver-active="${driver.active === false ? '0' : '1'}">
+        ${driver.active === false ? 'Réactiver' : 'Désactiver'}
+      </button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.toggle-driver-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.getAttribute('data-driver-id');
+      const active = button.getAttribute('data-driver-active') === '1';
+      if (!id || !db) return;
+      try {
+        await db.collection(DRIVERS_COLLECTION).doc(id).update({
+          active: !active,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (error) {
+        alert('Impossible de modifier le chauffeur : ' + (error.message || 'erreur'));
+      }
+    });
+  });
 }
 
 function renderReservations() {
@@ -281,12 +347,6 @@ function renderReservations() {
     return matchesSearch && matchesTrip && matchesStatus;
   });
 
-  const statusCounts = {
-    en_attente: reservationsCache.filter((item) => item.status === 'en_attente').length,
-    confirmee: reservationsCache.filter((item) => item.status === 'confirmee').length,
-    terminee: reservationsCache.filter((item) => item.status === 'terminee').length
-  };
-
   const setText = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.textContent = String(value);
@@ -295,7 +355,11 @@ function renderReservations() {
   setText('statTotal', reservationsCache.length);
   setText('statRoundTrip', reservationsCache.filter((item) => item.allerRetour).length);
   setText('statToday', reservationsCache.filter((item) => isToday(item.createdAt || item.createdAtClient)).length);
-  setText('statPending', statusCounts.en_attente);
+  setText('statPending', reservationsCache.filter((item) => item.status === 'en_attente').length);
+  setText('statAssigned', reservationsCache.filter((item) => item.status === 'assignee').length);
+  setText('statDrivers', driversCache.filter((driver) => driver.active !== false).length);
+
+  renderDriversMiniList();
 
   if (!filtered.length) {
     list.innerHTML = '';
@@ -309,7 +373,7 @@ function renderReservations() {
       <div class="reservation-header">
         <div>
           <h3>${escapeHtml(item.nom || 'Sans nom')}</h3>
-          <p>${escapeHtml(item.allerRetour ? 'Aller-retour' : 'Aller simple')} • ${escapeHtml(item.vehicule || 'berline')} • ${escapeHtml(item.statusLabel || item.status || 'en_attente')}</p>
+          <p>${escapeHtml(item.allerRetour ? 'Aller-retour' : 'Aller simple')} • ${escapeHtml(item.vehicule || 'berline')} • ${escapeHtml(item.statusLabel)}</p>
         </div>
         <button class="danger-btn small-btn" data-delete-id="${escapeHtml(item.id)}">Supprimer</button>
       </div>
@@ -324,10 +388,16 @@ function renderReservations() {
         <div><strong>Arrivée :</strong> ${escapeHtml(item.arrivee || '—')}</div>
         <div><strong>Créée le :</strong> ${escapeHtml(formatDateTime(item.createdAt || item.createdAtClient))}</div>
         <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
+        <div><strong>Chauffeur :</strong> ${escapeHtml(item.driverName || 'Non assigné')}</div>
+        <div>
+          <strong>Assigner :</strong>
+          <select class="driver-select" data-driver-id="${escapeHtml(item.id)}">${driverOptionsHtml(item.driverId || '')}</select>
+        </div>
         <div>
           <strong>Statut :</strong>
           <select class="status-select" data-status-id="${escapeHtml(item.id)}">
             <option value="en_attente" ${item.status === 'en_attente' ? 'selected' : ''}>En attente</option>
+            <option value="assignee" ${item.status === 'assignee' ? 'selected' : ''}>Assignée</option>
             <option value="confirmee" ${item.status === 'confirmee' ? 'selected' : ''}>Confirmée</option>
             <option value="en_cours" ${item.status === 'en_cours' ? 'selected' : ''}>En cours</option>
             <option value="terminee" ${item.status === 'terminee' ? 'selected' : ''}>Terminée</option>
@@ -376,22 +446,113 @@ function renderReservations() {
       }
     });
   });
+
+  list.querySelectorAll('[data-driver-id]').forEach((select) => {
+    select.addEventListener('change', async () => {
+      const id = select.getAttribute('data-driver-id');
+      const driverId = select.value;
+      if (!id || !db) return;
+      const driver = driversCache.find((item) => item.id === driverId);
+      try {
+        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({
+          driverId: driverId || '',
+          driverName: driver?.name || '',
+          status: driverId ? 'assignee' : 'en_attente',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: currentUser?.email || ''
+        });
+      } catch (error) {
+        alert('Assignation impossible : ' + (error.message || 'erreur'));
+      }
+    });
+  });
+}
+
+function renderDriverReservations() {
+  const list = document.getElementById('driverReservationsList');
+  if (!list) return;
+  const emptyState = document.getElementById('driverEmptyState');
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+  };
+
+  setText('driverStatTotal', driverReservationsCache.length);
+  setText('driverStatAssigned', driverReservationsCache.filter((item) => item.status === 'assignee').length);
+  setText('driverStatInProgress', driverReservationsCache.filter((item) => item.status === 'en_cours').length);
+  setText('driverStatDone', driverReservationsCache.filter((item) => item.status === 'terminee').length);
+
+  if (!driverReservationsCache.length) {
+    list.innerHTML = '';
+    if (emptyState) emptyState.style.display = 'block';
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = 'none';
+  list.innerHTML = driverReservationsCache.map((item) => `
+    <article class="reservation-card">
+      <div class="reservation-header">
+        <div>
+          <h3>${escapeHtml(item.nom || 'Sans nom')}</h3>
+          <p>${escapeHtml(statusLabel(item.status))}</p>
+        </div>
+      </div>
+      <div class="reservation-grid">
+        <div><strong>Téléphone :</strong> ${escapeHtml(item.telephone || '—')}</div>
+        <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(item.heure))}</div>
+        <div><strong>Départ :</strong> ${escapeHtml(item.depart || '—')}</div>
+        <div><strong>Arrivée :</strong> ${escapeHtml(item.arrivee || '—')}</div>
+        <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
+        <div>
+          <strong>Statut :</strong>
+          <select class="driver-status-select" data-status-id="${escapeHtml(item.id)}">
+            <option value="assignee" ${item.status === 'assignee' ? 'selected' : ''}>Assignée</option>
+            <option value="confirmee" ${item.status === 'confirmee' ? 'selected' : ''}>Confirmée</option>
+            <option value="en_cours" ${item.status === 'en_cours' ? 'selected' : ''}>En cours</option>
+            <option value="terminee" ${item.status === 'terminee' ? 'selected' : ''}>Terminée</option>
+          </select>
+        </div>
+      </div>
+    </article>
+  `).join('');
+
+  list.querySelectorAll('.driver-status-select').forEach((select) => {
+    select.addEventListener('change', async () => {
+      const id = select.getAttribute('data-status-id');
+      if (!id || !db) return;
+      try {
+        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({
+          status: select.value,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: currentUser?.email || ''
+        });
+      } catch (error) {
+        alert('Mise à jour impossible : ' + (error.message || 'erreur'));
+      }
+    });
+  });
 }
 
 function mapReservationDoc(doc) {
   const data = doc.data() || {};
-  const labels = {
-    en_attente: 'En attente',
-    confirmee: 'Confirmée',
-    en_cours: 'En cours',
-    terminee: 'Terminée',
-    annulee: 'Annulée'
-  };
   return {
     id: doc.id,
     ...data,
     status: data.status || 'en_attente',
-    statusLabel: labels[data.status || 'en_attente'] || (data.status || 'En attente')
+    statusLabel: statusLabel(data.status || 'en_attente')
+  };
+}
+
+function mapDriverDoc(doc) {
+  const data = doc.data() || {};
+  return {
+    id: doc.id,
+    ...data,
+    name: data.name || '',
+    phone: data.phone || '',
+    car: data.car || '',
+    active: data.active !== false
   };
 }
 
@@ -409,6 +570,30 @@ async function verifyAdminAccess(user) {
   if (badge) badge.textContent = `${user.email} • ${data.role || 'admin'}`;
 }
 
+async function verifyDriverAccess(user) {
+  const doc = await db.collection(DRIVERS_COLLECTION).doc(user.uid).get();
+  if (!doc.exists) {
+    throw new Error('Ton compte Auth existe, mais pas dans la collection drivers.');
+  }
+  const data = doc.data() || {};
+  if (data.active === false) {
+    throw new Error('Ton compte chauffeur est désactivé.');
+  }
+  currentDriverDoc = { id: doc.id, ...data };
+  const badge = document.getElementById('driverBadge');
+  if (badge) badge.textContent = `${data.name || user.email} • ${data.phone || ''} • ${data.car || ''}`;
+}
+
+function subscribeDrivers() {
+  if (unsubscribeDrivers) unsubscribeDrivers();
+  unsubscribeDrivers = db.collection(DRIVERS_COLLECTION)
+    .orderBy('name', 'asc')
+    .onSnapshot((snapshot) => {
+      driversCache = snapshot.docs.map(mapDriverDoc);
+      renderReservations();
+    });
+}
+
 function subscribeReservations() {
   if (unsubscribeReservations) unsubscribeReservations();
   unsubscribeReservations = db.collection(RESERVATIONS_COLLECTION)
@@ -422,9 +607,33 @@ function subscribeReservations() {
     });
 }
 
+function subscribeDriverReservations(uid) {
+  if (unsubscribeDriverReservations) unsubscribeDriverReservations();
+  unsubscribeDriverReservations = db.collection(RESERVATIONS_COLLECTION)
+    .where('driverId', '==', uid)
+    .onSnapshot((snapshot) => {
+      driverReservationsCache = snapshot.docs.map(mapReservationDoc).sort((a, b) => {
+        const ta = a.createdAt?.seconds || 0;
+        const tb = b.createdAt?.seconds || 0;
+        return tb - ta;
+      });
+      renderDriverReservations();
+    }, (error) => {
+      const syncStatus = document.getElementById('driverSyncStatus');
+      if (syncStatus) syncStatus.textContent = 'Erreur de synchronisation : ' + (error.message || 'lecture impossible');
+    });
+}
+
 function setDashboardVisibility(loggedIn) {
   const loginCard = document.getElementById('loginCard');
   const dashboardCard = document.getElementById('dashboardCard');
+  if (loginCard) loginCard.classList.toggle('hidden', loggedIn);
+  if (dashboardCard) dashboardCard.classList.toggle('hidden', !loggedIn);
+}
+
+function setDriverDashboardVisibility(loggedIn) {
+  const loginCard = document.getElementById('driverLoginCard');
+  const dashboardCard = document.getElementById('driverDashboardCard');
   if (loginCard) loginCard.classList.toggle('hidden', loggedIn);
   if (dashboardCard) dashboardCard.classList.toggle('hidden', !loggedIn);
 }
@@ -458,6 +667,29 @@ function initDashboardPage() {
   document.getElementById('tripFilter')?.addEventListener('change', renderReservations);
   document.getElementById('statusFilter')?.addEventListener('change', renderReservations);
 
+  document.getElementById('driverForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideInlineMessage('driverMsg');
+    const name = document.getElementById('driverName')?.value?.trim();
+    const phone = document.getElementById('driverPhone')?.value?.trim();
+    const car = document.getElementById('driverCar')?.value?.trim();
+    if (!name || !phone || !car) return;
+    try {
+      await db.collection(DRIVERS_COLLECTION).add({
+        name,
+        phone,
+        car,
+        active: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdBy: currentUser?.email || ''
+      });
+      document.getElementById('driverForm').reset();
+      showInlineMessage('driverMsg', 'Chauffeur ajouté.', false);
+    } catch (error) {
+      showInlineMessage('driverMsg', 'Erreur ajout chauffeur : ' + (error.message || 'erreur'), true);
+    }
+  });
+
   document.getElementById('clearBtn')?.addEventListener('click', async () => {
     if (!db || !reservationsCache.length) return;
     if (!confirm('Supprimer toutes les réservations visibles ?')) return;
@@ -490,11 +722,10 @@ function initDashboardPage() {
     if (!user) {
       setDashboardVisibility(false);
       reservationsCache = [];
+      driversCache = [];
       renderReservations();
-      if (unsubscribeReservations) {
-        unsubscribeReservations();
-        unsubscribeReservations = null;
-      }
+      if (unsubscribeReservations) { unsubscribeReservations(); unsubscribeReservations = null; }
+      if (unsubscribeDrivers) { unsubscribeDrivers(); unsubscribeDrivers = null; }
       if (syncStatus) syncStatus.textContent = 'Non connecté';
       return;
     }
@@ -503,6 +734,7 @@ function initDashboardPage() {
       await verifyAdminAccess(user);
       setDashboardVisibility(true);
       if (syncStatus) syncStatus.textContent = 'Synchronisé en temps réel avec Firebase';
+      subscribeDrivers();
       subscribeReservations();
     } catch (error) {
       await auth.signOut();
@@ -512,9 +744,61 @@ function initDashboardPage() {
   });
 }
 
+function initDriverPage() {
+  const loginCard = document.getElementById('driverLoginCard');
+  const dashboardCard = document.getElementById('driverDashboardCard');
+  if (!loginCard || !dashboardCard) return;
+
+  if (!auth || !db) {
+    showInlineMessage('driverLoginError', 'Firebase n’est pas configuré.', true);
+    return;
+  }
+
+  document.getElementById('driverLoginBtn')?.addEventListener('click', async () => {
+    hideInlineMessage('driverLoginError');
+    const email = document.getElementById('driverUser')?.value?.trim();
+    const pass = document.getElementById('driverPass')?.value;
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } catch (error) {
+      showInlineMessage('driverLoginError', error.message || 'Connexion impossible.', true);
+    }
+  });
+
+  document.getElementById('driverLogoutBtn')?.addEventListener('click', async () => {
+    await auth.signOut();
+  });
+
+  auth.onAuthStateChanged(async (user) => {
+    const syncStatus = document.getElementById('driverSyncStatus');
+    currentUser = user || null;
+    currentDriverDoc = null;
+    if (!user) {
+      setDriverDashboardVisibility(false);
+      driverReservationsCache = [];
+      renderDriverReservations();
+      if (unsubscribeDriverReservations) { unsubscribeDriverReservations(); unsubscribeDriverReservations = null; }
+      if (syncStatus) syncStatus.textContent = 'Non connecté';
+      return;
+    }
+
+    try {
+      await verifyDriverAccess(user);
+      setDriverDashboardVisibility(true);
+      if (syncStatus) syncStatus.textContent = 'Synchronisé en temps réel avec Firebase';
+      subscribeDriverReservations(user.uid);
+    } catch (error) {
+      await auth.signOut();
+      showInlineMessage('driverLoginError', error.message || 'Accès refusé.', true);
+      setDriverDashboardVisibility(false);
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initThemeAndPwa();
   initFirebase();
   initReservationPage();
   initDashboardPage();
+  initDriverPage();
 });
