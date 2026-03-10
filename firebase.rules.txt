@@ -23,7 +23,7 @@ service cloud.firestore {
         && exists(adminDoc(request.auth.uid))
         && get(adminDoc(request.auth.uid)).data.active == true
         && (
-          !('role' in get(adminDoc(request.auth.uid)).data)
+          !get(adminDoc(request.auth.uid)).data.keys().hasAny(['role'])
           || get(adminDoc(request.auth.uid)).data.role == 'admin'
         );
     }
@@ -32,7 +32,7 @@ service cloud.firestore {
       return signedIn()
         && exists(driverDoc(request.auth.uid))
         && (
-          !('active' in get(driverDoc(request.auth.uid)).data)
+          !get(driverDoc(request.auth.uid)).data.keys().hasAny(['active'])
           || get(driverDoc(request.auth.uid)).data.active == true
         );
     }
@@ -43,7 +43,7 @@ service cloud.firestore {
         && resource.data.driverId == request.auth.uid;
     }
 
-    function hasReservationKeys() {
+    function reservationKeysOk() {
       return request.resource.data.keys().hasOnly([
         'nom',
         'telephone',
@@ -73,87 +73,70 @@ service cloud.firestore {
       ]);
     }
 
-    function validReservationShape() {
-      return hasReservationKeys()
+    function reservationShapeOk() {
+      return reservationKeysOk()
         && request.resource.data.nom is string
         && request.resource.data.nom.size() >= 2
         && request.resource.data.nom.size() <= 120
-
         && request.resource.data.telephone is string
         && request.resource.data.telephone.size() >= 6
         && request.resource.data.telephone.size() <= 30
-
         && request.resource.data.email is string
         && request.resource.data.email.size() <= 150
-
         && request.resource.data.passagers is int
         && request.resource.data.passagers >= 1
         && request.resource.data.passagers <= 20
-
         && request.resource.data.numeroVol is string
         && request.resource.data.numeroVol.size() <= 40
-
         && request.resource.data.depart is string
         && request.resource.data.depart.size() >= 2
         && request.resource.data.depart.size() <= 300
-
         && request.resource.data.arrivee is string
         && request.resource.data.arrivee.size() >= 2
         && request.resource.data.arrivee.size() <= 300
-
         && request.resource.data.heure is string
         && request.resource.data.heure.size() <= 50
-
         && request.resource.data.vehicule is string
         && request.resource.data.vehicule in ['berline', 'suv', 'van']
-
         && request.resource.data.valises is int
         && request.resource.data.valises >= 0
         && request.resource.data.valises <= 20
-
         && request.resource.data.notes is string
         && request.resource.data.notes.size() <= 2000
-
         && request.resource.data.allerRetour is bool
-
         && request.resource.data.retourDepart is string
         && request.resource.data.retourDepart.size() <= 300
-
         && request.resource.data.retourArrivee is string
         && request.resource.data.retourArrivee.size() <= 300
-
         && request.resource.data.retourHeure is string
         && request.resource.data.retourHeure.size() <= 50
-
         && request.resource.data.retourNumeroVol is string
         && request.resource.data.retourNumeroVol.size() <= 40
-
         && request.resource.data.retourDetails is string
         && request.resource.data.retourDetails.size() <= 1000
-
         && request.resource.data.status is string
         && request.resource.data.status in [
           'en_attente',
           'assignee',
+          'acceptee',
+          'en_route',
+          'arrivee_client',
           'confirmee',
           'en_cours',
           'terminee',
           'annulee'
         ]
-
         && request.resource.data.createdAtClient is string
         && request.resource.data.source is string
         && request.resource.data.source == 'site-web'
-
         && request.resource.data.driverId is string
         && request.resource.data.driverName is string
         && request.resource.data.driverName.size() <= 120
-
         && request.resource.data.updatedBy is string;
     }
 
     function validReservationCreate() {
-      return validReservationShape()
+      return reservationShapeOk()
         && request.resource.data.status == 'en_attente'
         && request.resource.data.driverId == ''
         && request.resource.data.driverName == ''
@@ -161,13 +144,13 @@ service cloud.firestore {
     }
 
     function validReservationAdminUpdate() {
-      return validReservationShape()
+      return reservationShapeOk()
         && request.resource.data.createdAtClient == resource.data.createdAtClient
         && request.resource.data.source == resource.data.source;
     }
 
     function validReservationDriverUpdate() {
-      return validReservationShape()
+      return reservationShapeOk()
         && request.resource.data.nom == resource.data.nom
         && request.resource.data.telephone == resource.data.telephone
         && request.resource.data.email == resource.data.email
@@ -189,7 +172,14 @@ service cloud.firestore {
         && request.resource.data.source == resource.data.source
         && request.resource.data.driverId == resource.data.driverId
         && request.resource.data.driverName == resource.data.driverName
-        && request.resource.data.status in ['assignee', 'confirmee', 'en_cours', 'terminee'];
+        && request.resource.data.status in [
+          'assignee',
+          'acceptee',
+          'en_route',
+          'arrivee_client',
+          'en_cours',
+          'terminee'
+        ];
     }
 
     match /reservations/{reservationId} {

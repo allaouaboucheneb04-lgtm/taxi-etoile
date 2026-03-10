@@ -279,6 +279,9 @@ function statusLabel(status) {
   const labels = {
     en_attente: 'En attente',
     assignee: 'Assignée',
+    acceptee: 'Acceptée',
+    en_route: 'En route',
+    arrivee_client: 'Arrivé au client',
     confirmee: 'Confirmée',
     en_cours: 'En cours',
     terminee: 'Terminée',
@@ -400,6 +403,9 @@ function renderReservations() {
           <select class="status-select" data-status-id="${escapeHtml(item.id)}">
             <option value="en_attente" ${item.status === 'en_attente' ? 'selected' : ''}>En attente</option>
             <option value="assignee" ${item.status === 'assignee' ? 'selected' : ''}>Assignée</option>
+            <option value="acceptee" ${item.status === 'acceptee' ? 'selected' : ''}>Acceptée</option>
+            <option value="en_route" ${item.status === 'en_route' ? 'selected' : ''}>En route</option>
+            <option value="arrivee_client" ${item.status === 'arrivee_client' ? 'selected' : ''}>Arrivé au client</option>
             <option value="confirmee" ${item.status === 'confirmee' ? 'selected' : ''}>Confirmée</option>
             <option value="en_cours" ${item.status === 'en_cours' ? 'selected' : ''}>En cours</option>
             <option value="terminee" ${item.status === 'terminee' ? 'selected' : ''}>Terminée</option>
@@ -482,7 +488,7 @@ function renderDriverReservations() {
 
   setText('driverStatTotal', driverReservationsCache.length);
   setText('driverStatAssigned', driverReservationsCache.filter((item) => item.status === 'assignee').length);
-  setText('driverStatInProgress', driverReservationsCache.filter((item) => item.status === 'en_cours').length);
+  setText('driverStatInProgress', driverReservationsCache.filter((item) => ['acceptee', 'en_route', 'arrivee_client', 'en_cours'].includes(item.status)).length);
   setText('driverStatDone', driverReservationsCache.filter((item) => item.status === 'terminee').length);
 
   if (!driverReservationsCache.length) {
@@ -510,7 +516,9 @@ function renderDriverReservations() {
           <strong>Statut :</strong>
           <select class="driver-status-select" data-status-id="${escapeHtml(item.id)}">
             <option value="assignee" ${item.status === 'assignee' ? 'selected' : ''}>Assignée</option>
-            <option value="confirmee" ${item.status === 'confirmee' ? 'selected' : ''}>Confirmée</option>
+            <option value="acceptee" ${item.status === 'acceptee' ? 'selected' : ''}>Acceptée</option>
+            <option value="en_route" ${item.status === 'en_route' ? 'selected' : ''}>En route</option>
+            <option value="arrivee_client" ${item.status === 'arrivee_client' ? 'selected' : ''}>Arrivé au client</option>
             <option value="en_cours" ${item.status === 'en_cours' ? 'selected' : ''}>En cours</option>
             <option value="terminee" ${item.status === 'terminee' ? 'selected' : ''}>Terminée</option>
           </select>
@@ -676,7 +684,10 @@ function initDashboardPage() {
     const phone = document.getElementById('driverPhone')?.value?.trim();
     const uid = document.getElementById('driverUid')?.value?.trim();
     const car = document.getElementById('driverCar')?.value?.trim();
-    if (!name || !phone || !car) return;
+    if (!name || !phone || !car || !uid) {
+      showInlineMessage('driverMsg', 'Le UID Firebase du chauffeur est obligatoire pour que sa connexion fonctionne.', true);
+      return;
+    }
     try {
       const driverPayload = {
         name,
@@ -688,11 +699,7 @@ function initDashboardPage() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         createdBy: currentUser?.email || ''
       };
-      if (uid) {
-        await db.collection(DRIVERS_COLLECTION).doc(uid).set(driverPayload, { merge: true });
-      } else {
-        await db.collection(DRIVERS_COLLECTION).add(driverPayload);
-      }
+      await db.collection(DRIVERS_COLLECTION).doc(uid).set(driverPayload, { merge: true });
       document.getElementById('driverForm').reset();
       showInlineMessage('driverMsg', 'Chauffeur ajouté.', false);
     } catch (error) {
