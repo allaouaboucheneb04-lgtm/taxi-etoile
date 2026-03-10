@@ -245,7 +245,9 @@ function initReservationPage() {
       driverName: '',
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAtClient: new Date().toISOString(),
-      source: 'site-web'
+      source: 'site-web',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: 'client-site'
     };
 
     try {
@@ -672,17 +674,25 @@ function initDashboardPage() {
     hideInlineMessage('driverMsg');
     const name = document.getElementById('driverName')?.value?.trim();
     const phone = document.getElementById('driverPhone')?.value?.trim();
+    const uid = document.getElementById('driverUid')?.value?.trim();
     const car = document.getElementById('driverCar')?.value?.trim();
     if (!name || !phone || !car) return;
     try {
-      await db.collection(DRIVERS_COLLECTION).add({
+      const driverPayload = {
         name,
         phone,
         car,
+        plate: '',
         active: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         createdBy: currentUser?.email || ''
-      });
+      };
+      if (uid) {
+        await db.collection(DRIVERS_COLLECTION).doc(uid).set(driverPayload, { merge: true });
+      } else {
+        await db.collection(DRIVERS_COLLECTION).add(driverPayload);
+      }
       document.getElementById('driverForm').reset();
       showInlineMessage('driverMsg', 'Chauffeur ajouté.', false);
     } catch (error) {

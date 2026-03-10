@@ -6,42 +6,265 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function adminDoc(uid) {
+      return /databases/$(database)/documents/admins/$(uid);
+    }
+
+    function driverDoc(uid) {
+      return /databases/$(database)/documents/drivers/$(uid);
+    }
+
     function isAdmin() {
-      return signedIn() &&
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true;
+      return signedIn()
+        && exists(adminDoc(request.auth.uid))
+        && get(adminDoc(request.auth.uid)).data.active == true
+        && (
+          !('role' in get(adminDoc(request.auth.uid)).data)
+          || get(adminDoc(request.auth.uid)).data.role == 'admin'
+        );
     }
 
     function isDriver() {
-      return signedIn() &&
-        exists(/databases/$(database)/documents/drivers/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/drivers/$(request.auth.uid)).data.active != false;
+      return signedIn()
+        && exists(driverDoc(request.auth.uid))
+        && (
+          !('active' in get(driverDoc(request.auth.uid)).data)
+          || get(driverDoc(request.auth.uid)).data.active == true
+        );
+    }
+
+    function isAssignedDriver() {
+      return isDriver()
+        && resource.data.driverId is string
+        && resource.data.driverId == request.auth.uid;
+    }
+
+    function hasReservationKeys() {
+      return request.resource.data.keys().hasOnly([
+        'nom',
+        'telephone',
+        'email',
+        'passagers',
+        'numeroVol',
+        'depart',
+        'arrivee',
+        'heure',
+        'vehicule',
+        'valises',
+        'notes',
+        'allerRetour',
+        'retourDepart',
+        'retourArrivee',
+        'retourHeure',
+        'retourNumeroVol',
+        'retourDetails',
+        'status',
+        'createdAt',
+        'createdAtClient',
+        'source',
+        'driverId',
+        'driverName',
+        'updatedAt',
+        'updatedBy'
+      ]);
+    }
+
+    function validReservationShape() {
+      return hasReservationKeys()
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() >= 2
+        && request.resource.data.nom.size() <= 120
+
+        && request.resource.data.telephone is string
+        && request.resource.data.telephone.size() >= 6
+        && request.resource.data.telephone.size() <= 30
+
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 150
+
+        && request.resource.data.passagers is int
+        && request.resource.data.passagers >= 1
+        && request.resource.data.passagers <= 20
+
+        && request.resource.data.numeroVol is string
+        && request.resource.data.numeroVol.size() <= 40
+
+        && request.resource.data.depart is string
+        && request.resource.data.depart.size() >= 2
+        && request.resource.data.depart.size() <= 300
+
+        && request.resource.data.arrivee is string
+        && request.resource.data.arrivee.size() >= 2
+        && request.resource.data.arrivee.size() <= 300
+
+        && request.resource.data.heure is string
+        && request.resource.data.heure.size() <= 50
+
+        && request.resource.data.vehicule is string
+        && request.resource.data.vehicule in ['berline', 'suv', 'van']
+
+        && request.resource.data.valises is int
+        && request.resource.data.valises >= 0
+        && request.resource.data.valises <= 20
+
+        && request.resource.data.notes is string
+        && request.resource.data.notes.size() <= 2000
+
+        && request.resource.data.allerRetour is bool
+
+        && request.resource.data.retourDepart is string
+        && request.resource.data.retourDepart.size() <= 300
+
+        && request.resource.data.retourArrivee is string
+        && request.resource.data.retourArrivee.size() <= 300
+
+        && request.resource.data.retourHeure is string
+        && request.resource.data.retourHeure.size() <= 50
+
+        && request.resource.data.retourNumeroVol is string
+        && request.resource.data.retourNumeroVol.size() <= 40
+
+        && request.resource.data.retourDetails is string
+        && request.resource.data.retourDetails.size() <= 1000
+
+        && request.resource.data.status is string
+        && request.resource.data.status in [
+          'en_attente',
+          'assignee',
+          'confirmee',
+          'en_cours',
+          'terminee',
+          'annulee'
+        ]
+
+        && request.resource.data.createdAtClient is string
+        && request.resource.data.source is string
+        && request.resource.data.source == 'site-web'
+
+        && request.resource.data.driverId is string
+        && request.resource.data.driverName is string
+        && request.resource.data.driverName.size() <= 120
+
+        && request.resource.data.updatedBy is string;
+    }
+
+    function validReservationCreate() {
+      return validReservationShape()
+        && request.resource.data.status == 'en_attente'
+        && request.resource.data.driverId == ''
+        && request.resource.data.driverName == ''
+        && request.resource.data.updatedBy == 'client-site';
+    }
+
+    function validReservationAdminUpdate() {
+      return validReservationShape()
+        && request.resource.data.createdAtClient == resource.data.createdAtClient
+        && request.resource.data.source == resource.data.source;
+    }
+
+    function validReservationDriverUpdate() {
+      return validReservationShape()
+        && request.resource.data.nom == resource.data.nom
+        && request.resource.data.telephone == resource.data.telephone
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.passagers == resource.data.passagers
+        && request.resource.data.numeroVol == resource.data.numeroVol
+        && request.resource.data.depart == resource.data.depart
+        && request.resource.data.arrivee == resource.data.arrivee
+        && request.resource.data.heure == resource.data.heure
+        && request.resource.data.vehicule == resource.data.vehicule
+        && request.resource.data.valises == resource.data.valises
+        && request.resource.data.notes == resource.data.notes
+        && request.resource.data.allerRetour == resource.data.allerRetour
+        && request.resource.data.retourDepart == resource.data.retourDepart
+        && request.resource.data.retourArrivee == resource.data.retourArrivee
+        && request.resource.data.retourHeure == resource.data.retourHeure
+        && request.resource.data.retourNumeroVol == resource.data.retourNumeroVol
+        && request.resource.data.retourDetails == resource.data.retourDetails
+        && request.resource.data.createdAtClient == resource.data.createdAtClient
+        && request.resource.data.source == resource.data.source
+        && request.resource.data.driverId == resource.data.driverId
+        && request.resource.data.driverName == resource.data.driverName
+        && request.resource.data.status in ['assignee', 'confirmee', 'en_cours', 'terminee'];
     }
 
     match /reservations/{reservationId} {
-      allow create: if true;
+      allow create: if validReservationCreate();
+      allow read: if isAdmin() || isAssignedDriver();
+      allow update: if (isAdmin() && validReservationAdminUpdate())
+        || (isAssignedDriver() && validReservationDriverUpdate());
+      allow delete: if isAdmin();
+    }
 
-      allow read: if isAdmin() || (isDriver() && resource.data.driverId == request.auth.uid);
+    match /admins/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['email', 'role', 'active', 'createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.role == 'admin'
+        && request.resource.data.active == true;
 
       allow update: if isAdmin()
-        || (isDriver()
-          && resource.data.driverId == request.auth.uid
-          && request.resource.data.driverId == resource.data.driverId
-          && request.resource.data.driverName == resource.data.driverName);
+        && request.resource.data.keys().hasOnly(['email', 'role', 'active', 'createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.role == 'admin'
+        && request.resource.data.active is bool;
+
+      allow delete: if false;
+    }
+
+    match /drivers/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'name', 'phone', 'car', 'plate', 'active', 'createdAt', 'updatedAt', 'createdBy'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 30
+        && request.resource.data.car is string
+        && request.resource.data.car.size() <= 120
+        && request.resource.data.plate is string
+        && request.resource.data.plate.size() <= 30
+        && request.resource.data.active is bool
+        && request.resource.data.createdBy is string;
+
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'name', 'phone', 'car', 'plate', 'active', 'createdAt', 'updatedAt', 'createdBy'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 30
+        && request.resource.data.car is string
+        && request.resource.data.car.size() <= 120
+        && request.resource.data.plate is string
+        && request.resource.data.plate.size() <= 30
+        && request.resource.data.active is bool
+        && request.resource.data.createdBy == resource.data.createdBy;
 
       allow delete: if isAdmin();
     }
 
-    match /admins/{adminId} {
-      allow read: if signedIn() && request.auth.uid == adminId;
-      allow write: if false;
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
     }
 
-    match /drivers/{driverId} {
-      allow read: if isAdmin() || (signedIn() && request.auth.uid == driverId);
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (signedIn() && request.auth.uid == driverId);
-      allow delete: if isAdmin();
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
