@@ -1,26 +1,31 @@
-// ⚠️ À remplacer avec tes identifiants EmailJS
-const SERVICE_ID = "service_93dlf6r";
-const TEMPLATE_ID = "template_do45xgh";
-const PUBLIC_KEY = "sQJj_VedDt7vd7ivw";
+(function () {
+  const cfg = window.EMAILJS_CONFIG || {
+    publicKey: 'W-3rUaqJdvEjPE1J0',
+    serviceId: 'service_5phpu0d',
+    templateId: 'template_06gymkw'
+  };
 
-emailjs.init(PUBLIC_KEY);
+  function safeInit() {
+    if (!window.emailjs || !cfg.publicKey) return false;
+    try {
+      window.emailjs.init({ publicKey: cfg.publicKey });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
-document.getElementById("reservationForm").addEventListener("submit", function(e) {
-    e.preventDefault();
+  async function sendSimpleReservation(params) {
+    if (!safeInit() || !cfg.serviceId || !cfg.templateId) return false;
+    try {
+      await window.emailjs.send(cfg.serviceId, cfg.templateId, params);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
-    const params = {
-        nom: document.getElementById("nom").value,
-        telephone: document.getElementById("telephone").value,
-        depart: document.getElementById("depart").value,
-        arrivee: document.getElementById("arrivee").value,
-        heure: document.getElementById("heure").value
-    };
-
-    emailjs.send(SERVICE_ID, TEMPLATE_ID, params)
-        .then(res => {
-            document.getElementById("msg").innerText = "Réservation envoyée avec succès !";
-        })
-        .catch(err => {
-            document.getElementById("msg").innerText = "Erreur lors de l'envoi.";
-        });
-});
+  window.TaxiLiveEmail = {
+    sendSimpleReservation
+  };
+})();

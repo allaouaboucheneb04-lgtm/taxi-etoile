@@ -1,0 +1,8 @@
+EmailJS déjà configuré dans le site.
+
+Public Key: W-3rUaqJdvEjPE1J0
+Service ID: service_5phpu0d
+Template ID: template_06gymkw
+
+Le site envoie maintenant un email admin après chaque réservation.
+Vérifie aussi le template EmailJS avec les variables: name, phone, email, trip_type, pickup, destination, date, time, return_pickup, return_destination, return_date, return_time, passengers, luggage, message, flight_number, return_flight_number.
