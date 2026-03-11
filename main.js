@@ -382,7 +382,7 @@ function initThemeAndPwa() {
 
 function initFirebase() {
   if (!window.firebase || !window.FIREBASE_CONFIG) {
-    console.error('Firebase SDK ou config absente.');
+    console.error('Configuration du service absente.');
     return false;
   }
 
@@ -481,7 +481,7 @@ function initReservationPage() {
     hideInlineMessage('confirmation');
 
     if (!db) {
-      showInlineMessage('confirmation', 'Firebase n’est pas configuré.', true);
+      showInlineMessage('confirmation', 'Le service n’est pas configuré.', true);
       return;
     }
 
@@ -563,9 +563,9 @@ function initReservationPage() {
       form.reset();
       toggleRetourFields();
       suggestVehicle();
-      showInlineMessage('confirmation', '✅ Réservation envoyée et sauvegardée dans Firebase.', false);
+      showInlineMessage('confirmation', '✅ Réservation envoyée avec succès.', false);
     } catch (error) {
-      showInlineMessage('confirmation', 'Erreur Firebase : ' + (error.message || 'enregistrement impossible'), true);
+      showInlineMessage('confirmation', 'Erreur d’enregistrement : ' + (error.message || 'opération impossible'), true);
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -757,48 +757,6 @@ function renderDriversMiniList() {
 }
 
 
-
-function isAdminCompletedPage() {
-  return /admin-courses-accomplies\.html$/i.test(window.location.pathname);
-}
-
-function isDriverCompletedPage() {
-  return /chauffeur-courses-terminees\.html$/i.test(window.location.pathname);
-}
-
-async function promptCourseAmount(existingValue) {
-  const initial = existingValue != null && String(existingValue).trim() ? String(existingValue).trim() : '';
-  const value = window.prompt('Montant de la course ($)', initial);
-  if (value === null) return null;
-  const normalized = String(value).replace(',', '.').trim();
-  if (!normalized) {
-    alert('Le montant est obligatoire pour terminer la course.');
-    return undefined;
-  }
-  const amount = Number(normalized);
-  if (!Number.isFinite(amount) || amount < 0) {
-    alert('Montant invalide.');
-    return undefined;
-  }
-  return Math.round(amount * 100) / 100;
-}
-
-async function updateReservationStatusWithRules(id, nextStatus, item) {
-  if (!id || !db || !nextStatus) return false;
-  const payload = { status: nextStatus };
-  if (nextStatus === 'completed') {
-    let amount = await promptCourseAmount(item?.fareAmount ?? item?.amount ?? item?.montant ?? '');
-    if (amount === null) return false;
-    if (amount === undefined) return false;
-    payload.fareAmount = amount;
-    payload.montant = amount;
-    payload.completedAt = firebase.firestore.FieldValue.serverTimestamp();
-    payload.completedByDriverId = currentUser?.uid || item?.driverId || '';
-  }
-  await db.collection(RESERVATIONS_COLLECTION).doc(id).update(payload);
-  return true;
-}
-
 function reservationDirectionValue(item) {
   const raw = String(item?.direction || '').toLowerCase();
   if (raw.includes('retour')) return 'retour';
@@ -819,13 +777,12 @@ function getFilteredReservationsData() {
     const tripType = item.groupId ? 'aller-retour' : (reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple');
     const matchesTrip = tripFilter === 'all' || tripFilter === tripType;
     const normalizedStatus = normalizeStatus(item.status);
-    const pageStatusOk = isAdminCompletedPage() ? normalizedStatus === 'completed' : normalizedStatus !== 'completed';
     const matchesStatus = statusFilter === 'all' || normalizedStatus === statusFilter;
     const matchesDate = dateFilterMatch(item, dateFilter);
     const matchesDriver = driverFilter === 'all' || (driverFilter === 'none' ? !item.driverId : item.driverId === driverFilter);
     const matchesQuick = activeQuickFilter === 'all'
       || (activeQuickFilter === 'urgent' ? reservationIsUrgent(item) : true);
-    return pageStatusOk && matchesSearch && matchesTrip && matchesStatus && matchesDate && matchesDriver && matchesQuick;
+    return matchesSearch && matchesTrip && matchesStatus && matchesDate && matchesDriver && matchesQuick;
   }).sort((a, b) => compareReservations(a, b, sortFilter));
 }
 
@@ -1259,7 +1216,7 @@ function renderReservations() {
     select.addEventListener('change', async () => {
       const id = select.getAttribute('data-status-id');
       if (!id || !db) return;
-      try { const item = reservationsCache.find((entry) => entry.id === id); await updateReservationStatusWithRules(id, select.value, item); }
+      try { await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: select.value }); }
       catch (error) { alert('Mise à jour impossible : ' + (error.message || 'erreur')); }
     });
   });
@@ -1367,7 +1324,7 @@ Statut: ${statusLabel(item.status)}`;
       const id = button.getAttribute('data-quick-id');
       const status = button.getAttribute('data-quick-status');
       if (!id || !db || !status) return;
-      try { const item = reservationsCache.find((entry) => entry.id === id); await updateReservationStatusWithRules(id, status, item); }
+      try { await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status }); }
       catch (error) { alert('Mise à jour impossible : ' + (error.message || 'erreur')); }
     });
   });
@@ -1524,7 +1481,6 @@ function renderDriverReservations() {
         <div><strong>Vol :</strong> ${escapeHtml(reservationFlightNumber(item) || '—')}</div>
         <div><strong>Groupe :</strong> ${escapeHtml(item.groupId || '—')}</div>
         <div><strong>Course liée :</strong> ${escapeHtml(item.linkedTripId || '—')}</div>
-        <div><strong>Montant :</strong> ${escapeHtml(item.fareAmount ?? item.montant ?? '—')}${(item.fareAmount ?? item.montant) != null && String(item.fareAmount ?? item.montant) !== '' ? '$' : ''}</div>
         <div style="grid-column:1/-1;"><strong>Notes :</strong> ${escapeHtml(item.adminNote || item.notes || '—')}</div>
       </div>
       <div class="driver-status-actions">
@@ -1552,8 +1508,7 @@ function renderDriverReservations() {
       const id = select.getAttribute('data-status-id');
       if (!id || !db) return;
       try {
-        const item = driverReservationsCache.find((entry) => entry.id === id);
-        await updateReservationStatusWithRules(id, select.value, item);
+        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: select.value });
       } catch (error) {
         alert('Mise à jour impossible : ' + (error.message || 'erreur'));
       }
@@ -1566,8 +1521,7 @@ function renderDriverReservations() {
       const value = button.getAttribute('data-driver-status-value');
       if (!id || !db || !value) return;
       try {
-        const item = driverReservationsCache.find((entry) => entry.id === id);
-        await updateReservationStatusWithRules(id, value, item);
+        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: value });
       } catch (error) {
         alert('Mise à jour impossible : ' + (error.message || 'erreur'));
       }
@@ -1624,7 +1578,7 @@ function mapDriverDoc(doc) {
 async function verifyAdminAccess(user) {
   const doc = await db.collection(ADMINS_COLLECTION).doc(user.uid).get();
   if (!doc.exists) {
-    throw new Error('Ton compte existe dans Firebase Auth, mais pas dans la collection admins.');
+    throw new Error('Ton compte de connexion n’a pas encore les droits administrateur.');
   }
   const data = doc.data() || {};
   if (!data.active) {
@@ -1732,7 +1686,7 @@ function initDashboardPage() {
   if (!loginCard || !dashboardCard) return;
 
   if (!auth || !db) {
-    showInlineMessage('loginError', 'Firebase n’est pas configuré.', true);
+    showInlineMessage('loginError', 'Le service n’est pas configuré.', true);
     return;
   }
 
@@ -1775,7 +1729,7 @@ function initDashboardPage() {
     const uid = document.getElementById('driverUid')?.value?.trim();
     const car = document.getElementById('driverCar')?.value?.trim();
     if (!name || !email || !phone || !car || !uid) {
-      showInlineMessage('driverMsg', 'Nom, email, téléphone, UID Firebase et voiture/plaque sont obligatoires.', true);
+      showInlineMessage('driverMsg', 'Nom, email, téléphone, identifiant du compte et voiture/plaque sont obligatoires.', true);
       return;
     }
     try {
@@ -1817,7 +1771,7 @@ function initDashboardPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'reservations-taxi-etoile-firebase.json';
+    a.download = 'reservations-taxi-live.json';
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -1854,7 +1808,7 @@ function initDashboardPage() {
     try {
       await verifyAdminAccess(user);
       setDashboardVisibility(true);
-      if (syncStatus) syncStatus.textContent = 'Synchronisé en temps réel avec Firebase';
+      if (syncStatus) syncStatus.textContent = 'Synchronisé en temps réel';
       subscribeDrivers();
       subscribeReservations();
     } catch (error) {
@@ -1871,7 +1825,7 @@ function initDriverPage() {
   if (!loginCard || !dashboardCard) return;
 
   if (!auth || !db) {
-    showInlineMessage('driverLoginError', 'Firebase n’est pas configuré.', true);
+    showInlineMessage('driverLoginError', 'Le service n’est pas configuré.', true);
     return;
   }
 
@@ -1939,7 +1893,7 @@ function initDriverPage() {
     try {
       await verifyDriverAccess(user);
       setDriverDashboardVisibility(true);
-      if (syncStatus) syncStatus.textContent = 'Synchronisé en temps réel avec Firebase';
+      if (syncStatus) syncStatus.textContent = 'Synchronisé en temps réel';
       subscribeDriverReservations(user.uid);
     } catch (error) {
       await auth.signOut();

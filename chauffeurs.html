@@ -25,20 +25,19 @@
   <nav class="menu">
     <a href="index.html">Réservation</a>
     <a href="chauffeurs.html" class="active">Espace chauffeur</a>
-    <a href="chauffeur-courses-terminees.html">Courses terminées</a>
     <a href="acces-admin-taxi-live.html">Admin</a>
   </nav>
   <div class="hero-cta">
     <a class="hero-btn primary" href="tel:5144640121"><i class="fa fa-headset"></i> Dispatch</a>
     <a class="hero-btn secondary" href="index.html#reservationForm"><i class="fa fa-calendar-check"></i> Réserver</a>
   </div>
-  <p>Interface chauffeur optimisée pour accepter, suivre et terminer les courses rapidement. Les courses terminées sont déplacées dans la page dédiée.</p>
+  <p>Interface chauffeur optimisée pour accepter, suivre et terminer les courses rapidement.</p>
 </header>
 
 <div class="dashboard-wrapper">
   <section class="dashboard-card" id="driverLoginCard">
     <h2>Connexion chauffeur</h2>
-    <p class="small-muted">Connecte-toi avec le compte Firebase Authentication du chauffeur. Le même UID doit exister dans la collection <strong>drivers</strong>.</p>
+    <p class="small-muted">Connecte-toi avec ton compte chauffeur autorisé.</p>
     <div class="input-group"><i class="fa fa-envelope"></i><input type="email" id="driverUser" placeholder="Email chauffeur"></div>
     <div class="input-group"><i class="fa fa-lock"></i><input type="password" id="driverPass" placeholder="Mot de passe"></div>
     <button id="driverLoginBtn">Se connecter</button>
@@ -99,7 +98,7 @@
           <button class="quick-filter driver-quick-filter" data-driver-quick="today">Aujourd'hui</button>
           <button class="quick-filter driver-quick-filter" data-driver-quick="active">En cours</button>
           <button class="quick-filter driver-quick-filter" data-driver-quick="urgent">Urgentes</button>
-          <a class="quick-filter driver-quick-filter" href="chauffeur-courses-terminees.html">Terminées</a>
+          <button class="quick-filter driver-quick-filter" data-driver-quick="done">Terminées</button>
         </div>
         <div class="filter-grid driver-filter-grid">
           <input id="driverSearchReservation" type="search" placeholder="Rechercher nom, téléphone, adresse…">
@@ -108,7 +107,8 @@
             <option value="assigned">Assignée</option>
             <option value="accepted">Acceptée</option>
             <option value="on_the_way">En route</option>
-                        <option value="cancelled">Annulée</option>
+            <option value="completed">Terminée</option>
+            <option value="cancelled">Annulée</option>
           </select>
           <select id="driverDateFilter">
             <option value="all">Toutes dates</option>
@@ -121,7 +121,6 @@
       </div>
     </div>
 
-    <div class="inline-tool-buttons" style="margin-bottom:1rem;"><a href="chauffeur-courses-terminees.html" class="secondary-btn"><i class="fa fa-circle-check"></i> Voir mes courses terminées</a></div>
     <div id="driverReservationsList" class="reservation-list"></div>
     <p id="driverEmptyState" class="small-muted">Aucune course assignée.</p>
   </section>

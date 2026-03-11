@@ -33,7 +33,7 @@
 <div class="dashboard-wrapper">
   <section class="dashboard-card" id="loginCard">
     <h2>Connexion admin sécurisée</h2>
-    <p class="small-muted">Connecte-toi avec un compte <strong>Email / Mot de passe</strong> créé dans Firebase Authentication puis ajouté dans la collection <strong>admins</strong>.</p>
+    <p class="small-muted">Connecte-toi avec ton compte administrateur autorisé.</p>
     <div class="input-group"><i class="fa fa-envelope"></i><input type="email" id="adminUser" placeholder="Email admin"></div>
     <div class="input-group"><i class="fa fa-lock"></i><input type="password" id="adminPass" placeholder="Mot de passe"></div>
     <button id="loginBtn">Se connecter</button>
@@ -41,18 +41,19 @@
   </section>
   <section class="dashboard-card hidden" id="dashboardCard">
     <div class="dashboard-topbar admin-shell-topbar">
-      <button id="adminSidebarToggle" class="admin-sidebar-toggle" type="button" aria-expanded="false" aria-controls="adminSidebarPanel" aria-label="Ouvrir le menu admin">
-        <i class="fa fa-bars"></i><span>Menu</span>
-      </button>
       <div>
         <h2 id="pageTitle">Dashboard Admin Pro</h2>
         <p class="small-muted">Système admin pro séparé par modules</p>
         <p class="small-muted" id="adminBadge"></p>
         <p class="small-muted" id="syncStatus">Connexion en cours…</p>
       </div>
+      <div class="admin-topbar-actions">
+        <button id="enableAdminNotificationsBtn" class="secondary-btn">Activer les notifications admin</button>
+        <button id="logoutBtn" class="secondary-btn">Déconnexion</button>
+      </div>
     </div>
     <div class="admin-shell">
-      <aside class="admin-sidebar" id="adminSidebarPanel">
+      <aside class="admin-sidebar">
 
         <div class="admin-brand-card">
           <div class="admin-brand-top">
@@ -74,10 +75,6 @@
         <a href="admin-clients.html" class="admin-nav-link"><i class="fa fa-address-book"></i><span>Clients</span></a>
         <a href="admin-chauffeurs.html" class="admin-nav-link"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
         <a href="admin-outils.html" class="admin-nav-link"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
-        <div class="admin-menu-utilities">
-          <button id="enableAdminNotificationsBtn" class="admin-menu-action"><i class="fa fa-bell"></i><span>Activer les notifications admin</span></button>
-          <button id="logoutBtn" class="admin-menu-action admin-menu-action-danger"><i class="fa fa-right-from-bracket"></i><span>Déconnexion</span></button>
-        </div>
         <div class="admin-side-note">
           <strong>Conseil dispatch</strong>
           <p>Commence par le Dashboard, gère les urgences dans Réservations, suis le Planning, puis équilibre la charge dans Chauffeurs.</p>
@@ -180,7 +177,5 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="main.js"></script>
-  <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop"></div>
-<script src="admin-hamburger.js"></script>
 </body>
 </html>

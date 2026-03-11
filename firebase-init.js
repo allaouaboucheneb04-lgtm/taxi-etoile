@@ -13,4 +13,4 @@ window.db = getFirestore(app);
 window.auth = getAuth(app);
 window.analytics = getAnalytics(app);
 
-console.log("Firebase connected");
+console.log("Service connecté");

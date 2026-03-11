@@ -33,7 +33,7 @@
 <div class="dashboard-wrapper">
   <section class="dashboard-card" id="loginCard">
     <h2>Connexion admin sécurisée</h2>
-    <p class="small-muted">Connecte-toi avec un compte <strong>Email / Mot de passe</strong> créé dans Firebase Authentication puis ajouté dans la collection <strong>admins</strong>.</p>
+    <p class="small-muted">Connecte-toi avec ton compte administrateur autorisé.</p>
     <div class="input-group"><i class="fa fa-envelope"></i><input type="email" id="adminUser" placeholder="Email admin"></div>
     <div class="input-group"><i class="fa fa-lock"></i><input type="password" id="adminPass" placeholder="Mot de passe"></div>
     <button id="loginBtn">Se connecter</button>
@@ -41,18 +41,19 @@
   </section>
   <section class="dashboard-card hidden" id="dashboardCard">
     <div class="dashboard-topbar admin-shell-topbar">
-      <button id="adminSidebarToggle" class="admin-sidebar-toggle" type="button" aria-expanded="false" aria-controls="adminSidebarPanel" aria-label="Ouvrir le menu admin">
-        <i class="fa fa-bars"></i><span>Menu</span>
-      </button>
       <div>
         <h2 id="pageTitle">Réservations & Dispatch</h2>
         <p class="small-muted">Système admin pro séparé par modules</p>
         <p class="small-muted" id="adminBadge"></p>
         <p class="small-muted" id="syncStatus">Connexion en cours…</p>
       </div>
+      <div class="admin-topbar-actions">
+        <button id="enableAdminNotificationsBtn" class="secondary-btn">Activer les notifications admin</button>
+        <button id="logoutBtn" class="secondary-btn">Déconnexion</button>
+      </div>
     </div>
     <div class="admin-shell">
-      <aside class="admin-sidebar" id="adminSidebarPanel">
+      <aside class="admin-sidebar">
 
         <div class="admin-brand-card">
           <div class="admin-brand-top">
@@ -73,12 +74,7 @@
         <a href="admin-planning.html" class="admin-nav-link"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
         <a href="admin-clients.html" class="admin-nav-link"><i class="fa fa-address-book"></i><span>Clients</span></a>
         <a href="admin-chauffeurs.html" class="admin-nav-link"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
-        <a href="admin-courses-accomplies.html" class="admin-nav-link"><i class="fa fa-circle-check"></i><span>Courses accomplies</span></a>
         <a href="admin-outils.html" class="admin-nav-link"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
-        <div class="admin-menu-utilities">
-          <button id="enableAdminNotificationsBtn" class="admin-menu-action"><i class="fa fa-bell"></i><span>Activer les notifications admin</span></button>
-          <button id="logoutBtn" class="admin-menu-action admin-menu-action-danger"><i class="fa fa-right-from-bracket"></i><span>Déconnexion</span></button>
-        </div>
         <div class="admin-side-note">
           <strong>Conseil dispatch</strong>
           <p>Commence par le Dashboard, gère les urgences dans Réservations, suis le Planning, puis équilibre la charge dans Chauffeurs.</p>
@@ -88,8 +84,8 @@
         <section class="module-hero-card">
           <div>
             <div class="module-breadcrumb">Admin Pro <span>/</span> Réservations</div>
-            <h3>Dispatch actif</h3>
-            <p>Assigne, filtre et surveille les courses en direct. Les courses terminées vont dans la page Courses accomplies.</p>
+            <h3>Dispatch</h3>
+            <p>Assigne, filtre et surveille toutes les courses en direct.</p>
           </div>
           <div class="module-hero-actions">
             <a href="admin-reservations.html" class="ghost-action"><i class="fa fa-taxi"></i> Dispatch</a>
@@ -106,7 +102,7 @@
     <div class="filter-grid admin-filter-grid">
       <input id="searchReservation" type="search" placeholder="Rechercher client, téléphone, adresse, email…">
       <select id="tripFilter"><option value="all">Tous les trajets</option><option value="aller-simple">Aller simple</option><option value="aller-retour">Aller-retour</option></select>
-      <select id="statusFilter"><option value="all">Statuts actifs</option><option value="pending">En attente</option><option value="assigned">Assignée</option><option value="accepted">Acceptée</option><option value="on_the_way">En route</option><option value="cancelled">Annulée</option></select>
+      <select id="statusFilter"><option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="assigned">Assignée</option><option value="accepted">Acceptée</option><option value="on_the_way">En route</option><option value="completed">Terminée</option><option value="cancelled">Annulée</option></select>
       <select id="dateFilter"><option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="tomorrow">Demain</option><option value="upcoming">7 prochains jours</option><option value="past">Passées</option></select>
       <select id="driverFilter"><option value="all">Tous chauffeurs</option><option value="none">Sans chauffeur</option></select>
       <select id="sortFilter"><option value="datetime_asc">Date course ↑</option><option value="datetime_desc">Date course ↓</option><option value="created_desc">Création récente</option><option value="client_asc">Client A-Z</option></select>
@@ -119,7 +115,7 @@
         <button class="quick-filter" data-quick="unassigned">Sans chauffeur</button>
       </div>
       <div class="dispatch-summary-card"><strong id="reservationsSummary">0 réservation affichée</strong><span id="nextCourseSummary">Aucune course planifiée.</span></div>
-      <div class="inline-tool-buttons"><a href="admin-courses-accomplies.html" class="secondary-btn"><i class="fa fa-circle-check"></i> Courses accomplies</a><button id="resetFiltersBtn" class="secondary-btn">Réinitialiser</button><button id="exportCsvBtn" class="secondary-btn">Exporter CSV</button></div>
+      <div class="inline-tool-buttons"><button id="resetFiltersBtn" class="secondary-btn">Réinitialiser</button><button id="exportCsvBtn" class="secondary-btn">Exporter CSV</button></div>
     </div>
   </div>
   <div class="stats-grid compact-stats-grid">
@@ -147,7 +143,5 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="main.js"></script>
-  <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop"></div>
-<script src="admin-hamburger.js"></script>
 </body>
 </html>
