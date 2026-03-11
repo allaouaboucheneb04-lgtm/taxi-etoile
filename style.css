@@ -572,3 +572,27 @@ body {
 .secret-launcher-actions .secondary{background:#f2f2f2}
 .secret-hint{font-size:.9rem;color:#666;margin-top:12px}
 @media (max-width:600px){.secret-launcher-actions{grid-template-columns:1fr}}
+
+.reservation-actions-inline {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+  justify-content:flex-end;
+  align-items:center;
+}
+
+.reservation-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:1rem;
+}
+
+@media (max-width: 700px) {
+  .reservation-header {
+    flex-direction:column;
+  }
+  .reservation-actions-inline {
+    justify-content:flex-start;
+  }
+}

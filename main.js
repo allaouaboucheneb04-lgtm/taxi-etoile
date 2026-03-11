@@ -96,6 +96,29 @@ function reservationReturnDateTime(item) {
   return '';
 }
 
+
+function reservationDirection(item) {
+  return item.tripDirection || item.direction || (reservationRoundTrip(item) ? 'aller-retour' : 'aller');
+}
+
+function reservationDirectionLabel(item) {
+  const direction = reservationDirection(item);
+  if (direction === 'retour') return 'Retour';
+  if (direction === 'aller-retour') return 'Aller-retour';
+  return 'Aller';
+}
+
+function reservationGroupId(item) {
+  return item.bookingGroupId || item.groupId || item.linkedTripGroupId || '';
+}
+
+function buildMapsDirectionsUrl(item) {
+  const origin = reservationPickup(item);
+  const destination = reservationDropoff(item);
+  if (!origin || !destination) return '';
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -449,38 +472,75 @@ function initReservationPage() {
       ...retourNotes
     ].filter(Boolean).join(' | ');
 
-    const reservation = {
+    const bookingGroupId = (window.crypto?.randomUUID?.() || `booking-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    const sharedReservation = {
       clientName: document.getElementById('nom')?.value?.trim() || '',
       phone: document.getElementById('telephone')?.value?.trim() || '',
       email: document.getElementById('email')?.value?.trim() || '',
       passengers: Number(document.getElementById('passagers')?.value || 1),
-      flightNumber: document.getElementById('numeroVol')?.value?.trim() || '',
-      pickup: document.getElementById('depart')?.value?.trim() || '',
-      dropoff: document.getElementById('arrivee')?.value?.trim() || '',
-      datetime: document.getElementById('heure')?.value || '',
       vehicleType: document.getElementById('vehicule')?.value || 'berline',
       luggage: Number(document.getElementById('valises')?.value || 0),
       notes: notesValue,
       roundTrip: allerRetour,
-      retourDepart,
-      retourArrivee,
-      retourHeure,
-      retourNumeroVol,
-      retourDetails,
-      returnDate: retourHeure ? retourHeure.split('T')[0] : '',
-      returnTime: retourHeure ? (retourHeure.split('T')[1] || '') : '',
+      bookingGroupId,
       status: 'pending',
       driverId: null,
+      driverName: '',
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       source: 'site-web'
     };
 
+    const outboundReservation = {
+      ...sharedReservation,
+      tripDirection: 'aller',
+      linkedTripDirection: allerRetour ? 'retour' : null,
+      flightNumber: document.getElementById('numeroVol')?.value?.trim() || '',
+      pickup: document.getElementById('depart')?.value?.trim() || '',
+      dropoff: document.getElementById('arrivee')?.value?.trim() || '',
+      datetime: document.getElementById('heure')?.value || '',
+      linkedPickup: allerRetour ? retourDepart : '',
+      linkedDropoff: allerRetour ? retourArrivee : '',
+      linkedDatetime: allerRetour ? retourHeure : '',
+      linkedFlightNumber: allerRetour ? retourNumeroVol : '',
+      linkedTripNotes: allerRetour ? retourDetails : ''
+    };
+
+    const reservationsToCreate = [outboundReservation];
+
+    if (allerRetour) {
+      reservationsToCreate.push({
+        ...sharedReservation,
+        tripDirection: 'retour',
+        linkedTripDirection: 'aller',
+        flightNumber: retourNumeroVol,
+        pickup: retourDepart,
+        dropoff: retourArrivee,
+        datetime: retourHeure,
+        linkedPickup: outboundReservation.pickup,
+        linkedDropoff: outboundReservation.dropoff,
+        linkedDatetime: outboundReservation.datetime,
+        linkedFlightNumber: outboundReservation.flightNumber,
+        linkedTripNotes: document.getElementById('notes')?.value?.trim() || ''
+      });
+    }
+
     try {
-      await db.collection(RESERVATIONS_COLLECTION).add(reservation);
+      const createdDocs = [];
+      for (const item of reservationsToCreate) {
+        const ref = await db.collection(RESERVATIONS_COLLECTION).add(item);
+        createdDocs.push(ref.id);
+      }
+      if (createdDocs.length === 2) {
+        await Promise.all(createdDocs.map((id, index) => db.collection(RESERVATIONS_COLLECTION).doc(id).update({
+          linkedTripId: createdDocs[index === 0 ? 1 : 0]
+        })));
+      }
       form.reset();
       toggleRetourFields();
       suggestVehicle();
-      showInlineMessage('confirmation', '✅ Réservation envoyée et sauvegardée dans Firebase.', false);
+      showInlineMessage('confirmation', allerRetour
+        ? '✅ Aller et retour créés séparément dans l’admin.'
+        : '✅ Réservation envoyée et sauvegardée dans Firebase.', false);
     } catch (error) {
       showInlineMessage('confirmation', 'Erreur Firebase : ' + (error.message || 'enregistrement impossible'), true);
     } finally {
@@ -495,7 +555,8 @@ function initReservationPage() {
 function reservationSearchBlob(item) {
   return [
     reservationName(item), reservationPhone(item), item.email, reservationFlightNumber(item),
-    reservationPickup(item), reservationDropoff(item), item.notes, item.status, item.driverName
+    reservationPickup(item), reservationDropoff(item), item.notes, item.status, item.driverName,
+    reservationDirectionLabel(item), reservationGroupId(item)
   ].join(' ').toLowerCase();
 }
 
@@ -578,7 +639,9 @@ function renderReservations() {
   const filtered = reservationsCache.filter((item) => {
     const matchesSearch = reservationSearchBlob(item).includes(searchValue);
     const tripType = reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple';
-    const matchesTrip = tripFilter === 'all' || tripFilter === tripType;
+    const matchesTrip = tripFilter === 'all'
+      || tripFilter === tripType
+      || (tripFilter === 'aller-retour' && !!reservationGroupId(item));
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesTrip && matchesStatus;
   });
@@ -589,7 +652,7 @@ function renderReservations() {
   };
 
   setText('statTotal', reservationsCache.length);
-  setText('statRoundTrip', reservationsCache.filter((item) => item.roundTrip || item.allerRetour).length);
+  setText('statRoundTrip', new Set(reservationsCache.filter((item) => item.roundTrip || item.allerRetour || reservationGroupId(item)).map((item) => reservationGroupId(item) || item.id)).size);
   setText('statToday', reservationsCache.filter((item) => isToday(item.createdAt || item.createdAtClient)).length);
   setText('statPending', reservationsCache.filter((item) => normalizeStatus(item.status) === 'pending').length);
   setText('statAssigned', reservationsCache.filter((item) => normalizeStatus(item.status) === 'assigned').length);
@@ -604,14 +667,21 @@ function renderReservations() {
   }
 
   if (emptyState) emptyState.style.display = 'none';
-  list.innerHTML = filtered.map((item) => `
+  list.innerHTML = filtered.map((item) => {
+    const mapsUrl = buildMapsDirectionsUrl(item);
+    const phoneLink = reservationPhone(item) ? `tel:${String(reservationPhone(item)).replace(/[^+\d]/g, '')}` : '';
+    return `
     <article class="reservation-card">
       <div class="reservation-header">
         <div>
           <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
-          <p>${escapeHtml(reservationRoundTrip(item) ? 'Aller-retour' : 'Aller simple')} • ${escapeHtml(reservationVehicle(item))} • ${escapeHtml(item.statusLabel)}</p>
+          <p>${escapeHtml(reservationDirectionLabel(item))} • ${escapeHtml(reservationRoundTrip(item) || reservationGroupId(item) ? 'Réservation liée' : 'Trajet simple')} • ${escapeHtml(reservationVehicle(item))} • ${escapeHtml(item.statusLabel)}</p>
         </div>
-        <button class="danger-btn small-btn" data-delete-id="${escapeHtml(item.id)}">Supprimer</button>
+        <div class="reservation-actions-inline">
+          ${phoneLink ? `<a class="secondary-btn small-btn" href="${escapeHtml(phoneLink)}">Appeler</a>` : ''}
+          ${mapsUrl ? `<a class="secondary-btn small-btn" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">Voir trajet</a>` : ''}
+          <button class="danger-btn small-btn" data-delete-id="${escapeHtml(item.id)}">Supprimer</button>
+        </div>
       </div>
       <div class="reservation-grid">
         <div><strong>Téléphone :</strong> ${escapeHtml(reservationPhone(item) || '—')}</div>
@@ -620,9 +690,12 @@ function renderReservations() {
         <div><strong>Valises :</strong> ${escapeHtml(reservationLuggage(item))}</div>
         <div><strong>Vol :</strong> ${escapeHtml(reservationFlightNumber(item) || '—')}</div>
         <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
+        <div><strong>Direction :</strong> ${escapeHtml(reservationDirectionLabel(item))}</div>
+        <div><strong>Groupe :</strong> ${escapeHtml(reservationGroupId(item) || '—')}</div>
         <div><strong>Départ :</strong> ${escapeHtml(reservationPickup(item) || '—')}</div>
         <div><strong>Arrivée :</strong> ${escapeHtml(reservationDropoff(item) || '—')}</div>
         <div><strong>Créée le :</strong> ${escapeHtml(formatDateTime(item.createdAt || item.createdAtClient))}</div>
+        <div><strong>Course liée :</strong> ${escapeHtml(item.linkedTripId || '—')}</div>
         <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
         <div><strong>Chauffeur :</strong> ${escapeHtml(item.driverName || 'Non assigné')}</div>
         <div>
@@ -641,18 +714,18 @@ function renderReservations() {
           </select>
         </div>
       </div>
-      ${reservationRoundTrip(item) ? `
+      ${(item.linkedPickup || item.linkedDropoff || item.linkedDatetime || item.linkedFlightNumber || item.linkedTripNotes) ? `
         <div class="retour-summary">
-          <h4>Retour</h4>
-          <p><strong>Départ :</strong> ${escapeHtml(item.retourDepart || '—')}</p>
-          <p><strong>Arrivée :</strong> ${escapeHtml(item.retourArrivee || '—')}</p>
-          <p><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationReturnDateTime(item)))}</p>
-          <p><strong>Vol retour :</strong> ${escapeHtml(item.retourNumeroVol || '—')}</p>
-          <p><strong>Détails :</strong> ${escapeHtml(item.retourDetails || '—')}</p>
+          <h4>Trajet lié : ${escapeHtml(item.linkedTripDirection === 'retour' ? 'Retour' : item.linkedTripDirection === 'aller' ? 'Aller' : 'Autre')}</h4>
+          <p><strong>Départ :</strong> ${escapeHtml(item.linkedPickup || '—')}</p>
+          <p><strong>Arrivée :</strong> ${escapeHtml(item.linkedDropoff || '—')}</p>
+          <p><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(item.linkedDatetime || ''))}</p>
+          <p><strong>Vol :</strong> ${escapeHtml(item.linkedFlightNumber || '—')}</p>
+          <p><strong>Détails :</strong> ${escapeHtml(item.linkedTripNotes || '—')}</p>
         </div>
       ` : ''}
     </article>
-  `).join('');
+  `;}).join('');
 
   list.querySelectorAll('[data-delete-id]').forEach((button) => {
     button.addEventListener('click', async () => {
@@ -727,14 +800,16 @@ function renderDriverReservations() {
       <div class="reservation-header">
         <div>
           <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
-          <p>${escapeHtml(statusLabel(item.status))}</p>
+          <p>${escapeHtml(reservationDirectionLabel(item))} • ${escapeHtml(statusLabel(item.status))}</p>
         </div>
       </div>
       <div class="reservation-grid">
         <div><strong>Téléphone :</strong> ${escapeHtml(reservationPhone(item) || '—')}</div>
         <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
+        <div><strong>Direction :</strong> ${escapeHtml(reservationDirectionLabel(item))}</div>
         <div><strong>Départ :</strong> ${escapeHtml(reservationPickup(item) || '—')}</div>
         <div><strong>Arrivée :</strong> ${escapeHtml(reservationDropoff(item) || '—')}</div>
+        <div><strong>Groupe :</strong> ${escapeHtml(reservationGroupId(item) || '—')}</div>
         <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
         <div>
           <strong>Statut :</strong>
