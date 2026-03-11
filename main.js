@@ -1,4 +1,17 @@
 
+// --- FIX: splitDateTimeParts helper ---
+function splitDateTimeParts(datetimeString){
+  if(!datetimeString) return {date:"", time:""};
+  try{
+    const parts = datetimeString.split(" ");
+    return { date: parts[0] || "", time: parts[1] || "" };
+  }catch(e){
+    return {date:"", time:""};
+  }
+}
+// --- END FIX ---
+
+
 // --- ROUND TRIP AUTO SPLIT ---
 function expandRoundTrips(list){
   const out=[];
@@ -247,52 +260,6 @@ async function playNotificationBeep() {
   } catch {}
 }
 
-
-let emailJsReady = false;
-function initEmailJsIfNeeded() {
-  if (emailJsReady) return true;
-  const config = window.EMAILJS_CONFIG || {};
-  if (!window.emailjs || !config.publicKey || !config.serviceId || !config.templateId) return false;
-  try {
-    window.emailjs.init({ publicKey: config.publicKey });
-    emailJsReady = true;
-    return true;
-  } catch (error) {
-    console.warn('EmailJS non initialisé.', error);
-    return false;
-  }
-}
-
-function sendReservationEmailNotification(data) {
-  const config = window.EMAILJS_CONFIG || {};
-  if (!initEmailJsIfNeeded()) return Promise.resolve(false);
-  const payload = {
-    name: data.name || '',
-    phone: data.phone || '',
-    email: data.email || '',
-    trip_type: data.trip_type || 'aller-simple',
-    pickup: data.pickup || '',
-    destination: data.destination || '',
-    date: data.date || '',
-    time: data.time || '',
-    return_pickup: data.return_pickup || '',
-    return_destination: data.return_destination || '',
-    return_date: data.return_date || '',
-    return_time: data.return_time || '',
-    passengers: data.passengers || '',
-    luggage: data.luggage || '',
-    message: data.message || '',
-    flight_number: data.flight_number || '',
-    return_flight_number: data.return_flight_number || ''
-  };
-  return window.emailjs.send(config.serviceId, config.templateId, payload)
-    .then(() => true)
-    .catch((error) => {
-      console.warn('Email réservation non envoyé.', error);
-      return false;
-    });
-}
-
 async function showBrowserNotification(title, body, tag) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const options = {
@@ -521,7 +488,6 @@ function initReservationPage() {
   valisesInput?.addEventListener('input', suggestVehicle);
   toggleRetourFields();
   suggestVehicle();
-  initEmailJsIfNeeded();
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -607,29 +573,6 @@ function initReservationPage() {
           direction: 'aller-simple'
         });
       }
-
-      const allerParts = splitDateTimeParts(baseReservation.datetime);
-      const retourParts = splitDateTimeParts(retourHeure);
-      await sendReservationEmailNotification({
-        name: baseReservation.clientName,
-        phone: baseReservation.phone,
-        email: baseReservation.email,
-        trip_type: allerRetour ? 'aller-retour' : 'aller-simple',
-        pickup: baseReservation.pickup,
-        destination: baseReservation.dropoff,
-        date: allerParts.date,
-        time: allerParts.time,
-        return_pickup: allerRetour ? (retourDepart || baseReservation.dropoff) : '',
-        return_destination: allerRetour ? (retourArrivee || baseReservation.pickup) : '',
-        return_date: allerRetour ? retourParts.date : '',
-        return_time: allerRetour ? retourParts.time : '',
-        passengers: baseReservation.passengers,
-        luggage: baseReservation.luggage,
-        message: [baseReservation.notes, allerRetour ? `Vol aller: ${baseReservation.flightNumber || '—'}` : '', allerRetour ? `Vol retour: ${retourNumeroVol || '—'}` : '', retourDetails].filter(Boolean).join(' | '),
-        flight_number: baseReservation.flightNumber,
-        return_flight_number: retourNumeroVol
-      });
-
       form.reset();
       toggleRetourFields();
       suggestVehicle();
