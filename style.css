@@ -211,12 +211,20 @@ body.theme-taxi { background: #FFF8E1; color: #333; }
   overflow:auto;
 }
 
-.autocomplete div {
+.autocomplete .autocomplete-item {
+  display:block;
+  width:100%;
+  border:none;
+  background:transparent;
+  text-align:left;
   padding:10px 12px;
   cursor:pointer;
+  font:inherit;
+  color:#222;
 }
 
-.autocomplete div:hover {
+.autocomplete .autocomplete-item:hover,
+.autocomplete .autocomplete-item.active {
   background:#fff4bf;
 }
 

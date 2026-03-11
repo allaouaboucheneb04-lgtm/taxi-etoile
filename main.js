@@ -474,31 +474,115 @@ function initFirebase() {
   return true;
 }
 
-async function searchAddress(query, container) {
-  if (!container || query.length < 3) {
-    if (container) container.style.display = 'none';
+const AUTOCOMPLETE_REQUESTS = new Map();
+const AUTOCOMPLETE_DEBOUNCE = new Map();
+
+function normalizePhotonLabel(feature) {
+  if (!feature?.properties) return '';
+  const p = feature.properties;
+  const parts = [
+    p.name,
+    p.housenumber ? `${p.housenumber} ${p.street || ''}`.trim() : p.street,
+    p.postcode,
+    p.city || p.county || p.state,
+    p.country
+  ].filter(Boolean);
+  return Array.from(new Set(parts)).join(', ');
+}
+
+function normalizeNominatimLabel(place) {
+  return place?.display_name || '';
+}
+
+async function fetchPhotonSuggestions(query) {
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=fr&osm_tag=place:house&bbox=-141,41,-52,84`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+  if (!res.ok) throw new Error('photon_error');
+  const json = await res.json();
+  return (json.features || [])
+    .map((feature) => ({ label: normalizePhotonLabel(feature) }))
+    .filter((item) => item.label);
+}
+
+async function fetchNominatimSuggestions(query) {
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&addressdetails=1&limit=6&countrycodes=ca`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+  if (!res.ok) throw new Error('nominatim_error');
+  const json = await res.json();
+  return (json || [])
+    .map((place) => ({ label: normalizeNominatimLabel(place) }))
+    .filter((item) => item.label);
+}
+
+function uniqueSuggestions(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item.label.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 6);
+}
+
+function closeAutocomplete(container) {
+  if (!container) return;
+  container.style.display = 'none';
+  container.innerHTML = '';
+  container.dataset.activeIndex = '-1';
+}
+
+function renderAutocompleteResults(container, input, suggestions) {
+  container.innerHTML = '';
+  container.dataset.activeIndex = '-1';
+
+  suggestions.forEach((item, index) => {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'autocomplete-item';
+    option.textContent = item.label;
+    option.setAttribute('data-index', String(index));
+    option.addEventListener('click', () => {
+      input.value = item.label;
+      closeAutocomplete(container);
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    container.appendChild(option);
+  });
+
+  container.style.display = suggestions.length ? 'block' : 'none';
+}
+
+function updateAutocompleteActive(container) {
+  const activeIndex = Number(container.dataset.activeIndex || '-1');
+  Array.from(container.children).forEach((child, index) => {
+    child.classList.toggle('active', index === activeIndex);
+  });
+}
+
+async function searchAddress(query, container, input) {
+  if (!container || !input || query.trim().length < 3) {
+    closeAutocomplete(container);
     return;
   }
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=ca`;
-  try {
-    const res = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
-    const results = await res.json();
-    container.innerHTML = '';
-    container.style.display = results.length ? 'block' : 'none';
+  const requestId = Date.now() + Math.random();
+  AUTOCOMPLETE_REQUESTS.set(container.id, requestId);
 
-    results.forEach((place) => {
-      const div = document.createElement('div');
-      div.textContent = place.display_name;
-      div.addEventListener('click', () => {
-        const input = container.previousElementSibling;
-        input.value = place.display_name;
-        container.style.display = 'none';
-      });
-      container.appendChild(div);
-    });
+  try {
+    let suggestions = [];
+    try {
+      suggestions = await fetchPhotonSuggestions(query);
+    } catch {
+      suggestions = await fetchNominatimSuggestions(query);
+    }
+
+    if (AUTOCOMPLETE_REQUESTS.get(container.id) !== requestId) return;
+
+    const cleaned = uniqueSuggestions(suggestions);
+    renderAutocompleteResults(container, input, cleaned);
   } catch {
-    container.style.display = 'none';
+    if (AUTOCOMPLETE_REQUESTS.get(container.id) !== requestId) return;
+    closeAutocomplete(container);
   }
 }
 
@@ -507,10 +591,50 @@ function setupAutocomplete(inputId, resultsId) {
   const results = document.getElementById(resultsId);
   if (!input || !results) return;
 
-  input.addEventListener('input', () => searchAddress(input.value, results));
+  input.setAttribute('autocomplete', 'off');
+  results.dataset.activeIndex = '-1';
+
+  input.addEventListener('input', () => {
+    clearTimeout(AUTOCOMPLETE_DEBOUNCE.get(inputId));
+    const timeout = setTimeout(() => searchAddress(input.value, results, input), 220);
+    AUTOCOMPLETE_DEBOUNCE.set(inputId, timeout);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const items = Array.from(results.children);
+    if (!items.length || results.style.display === 'none') return;
+
+    let activeIndex = Number(results.dataset.activeIndex || '-1');
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = activeIndex < items.length - 1 ? activeIndex + 1 : 0;
+      results.dataset.activeIndex = String(activeIndex);
+      updateAutocompleteActive(results);
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = activeIndex > 0 ? activeIndex - 1 : items.length - 1;
+      results.dataset.activeIndex = String(activeIndex);
+      updateAutocompleteActive(results);
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && items[activeIndex]) {
+        e.preventDefault();
+        items[activeIndex].click();
+      }
+    } else if (e.key === 'Escape') {
+      closeAutocomplete(results);
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => closeAutocomplete(results), 150);
+  });
+
   document.addEventListener('click', (e) => {
     if (!results.contains(e.target) && e.target !== input) {
-      results.style.display = 'none';
+      closeAutocomplete(results);
     }
   });
 }
