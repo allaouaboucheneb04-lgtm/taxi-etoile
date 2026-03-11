@@ -1,4 +1,3 @@
-
 (function(){
   function initAdminHamburger(){
     const body = document.body;
@@ -14,23 +13,27 @@
       document.body.appendChild(overlay);
     }
 
-    if(!document.getElementById('adminMenuToggle')){
-      const btn = document.createElement('button');
+    let btn = document.getElementById('adminMenuToggle');
+    if(!btn){
+      btn = document.createElement('button');
       btn.type = 'button';
       btn.id = 'adminMenuToggle';
       btn.className = 'admin-menu-toggle';
       btn.innerHTML = '<i class="fa fa-bars"></i><span>Menu</span>';
-      btn.addEventListener('click', ()=> body.classList.toggle('admin-sidebar-open'));
-      const actions = topbar.querySelector('.admin-topbar-actions');
-      if(actions) topbar.insertBefore(btn, actions);
-      else topbar.appendChild(btn);
+      topbar.insertBefore(btn, topbar.firstChild);
     }
+    btn.onclick = ()=> body.classList.toggle('admin-sidebar-open');
 
     let footer = sidebar.querySelector('.admin-sidebar-footer');
     if(!footer){
       footer = document.createElement('div');
       footer.className = 'admin-sidebar-footer';
       sidebar.appendChild(footer);
+    }
+
+    const topbarActions = topbar.querySelector('.admin-topbar-actions');
+    if(topbarActions){
+      topbarActions.style.display = 'none';
     }
 
     const notifyBtn = document.getElementById('enableAdminNotificationsBtn');
