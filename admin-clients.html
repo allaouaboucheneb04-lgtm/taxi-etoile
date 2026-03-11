@@ -41,6 +41,9 @@
   </section>
   <section class="dashboard-card hidden" id="dashboardCard">
     <div class="dashboard-topbar admin-shell-topbar">
+      <button id="adminSidebarToggle" class="admin-sidebar-toggle" type="button" aria-expanded="false" aria-controls="adminSidebarPanel" aria-label="Ouvrir le menu admin">
+        <i class="fa fa-bars"></i><span>Menu</span>
+      </button>
       <div>
         <h2 id="pageTitle">Répertoire clients</h2>
         <p class="small-muted">Système admin pro séparé par modules</p>
@@ -53,7 +56,7 @@
       </div>
     </div>
     <div class="admin-shell">
-      <aside class="admin-sidebar">
+      <aside class="admin-sidebar" id="adminSidebarPanel">
 
         <div class="admin-brand-card">
           <div class="admin-brand-top">
@@ -136,5 +139,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="main.js"></script>
+  <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop"></div>
+<script src="admin-hamburger.js"></script>
 </body>
 </html>
