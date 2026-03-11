@@ -568,25 +568,132 @@ function driverOptionsHtml(selectedId = '') {
   `).join('');
 }
 
+
+function reservationDateObject(item) {
+  const value = reservationDateTime(item);
+  if (!value) return null;
+  if (typeof value?.toDate === 'function') return value.toDate();
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function reservationIsUrgent(item) {
+  if (item.urgent === true || item.priority === 'high') return true;
+  const status = normalizeStatus(item.status);
+  if (['completed','cancelled'].includes(status)) return false;
+  const d = reservationDateObject(item);
+  if (!d) return false;
+  const diff = d.getTime() - Date.now();
+  return diff >= 0 && diff <= 1000 * 60 * 180;
+}
+
+function dateFilterMatch(item, mode) {
+  if (mode === 'all') return true;
+  const d = reservationDateObject(item);
+  if (!d) return false;
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const startAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+  const nextWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+  if (mode === 'today') return d >= startToday && d < startTomorrow;
+  if (mode === 'tomorrow') return d >= startTomorrow && d < startAfterTomorrow;
+  if (mode === 'upcoming') return d >= startToday && d < nextWeek;
+  if (mode === 'past') return d < startToday;
+  return true;
+}
+
+function compareReservations(a, b, sortMode) {
+  const ad = reservationDateObject(a)?.getTime() || 0;
+  const bd = reservationDateObject(b)?.getTime() || 0;
+  const ac = a.createdAt?.seconds || 0;
+  const bc = b.createdAt?.seconds || 0;
+  if (sortMode === 'datetime_desc') return bd - ad;
+  if (sortMode === 'created_desc') return bc - ac;
+  if (sortMode === 'client') return reservationName(a).localeCompare(reservationName(b), 'fr', {sensitivity:'base'});
+  if (sortMode === 'status') return statusLabel(a.status).localeCompare(statusLabel(b.status), 'fr', {sensitivity:'base'}) || ad - bd;
+  return ad - bd;
+}
+
+function driverFilterOptionsHtml(selected = 'all') {
+  const base = ['<option value="all">Tous chauffeurs</option>','<option value="none">Sans chauffeur</option>'];
+  driversCache.filter(d => d.active !== false).forEach((driver) => {
+    base.push(`<option value="${escapeHtml(driver.id)}" ${selected === driver.id ? 'selected' : ''}>${escapeHtml(driver.name || 'Sans nom')}</option>`);
+  });
+  return base.join('');
+}
+
+function updateDriverFilterOptions() {
+  const select = document.getElementById('driverFilter');
+  if (!select) return;
+  const current = select.value || 'all';
+  select.innerHTML = driverFilterOptionsHtml(current);
+  if (![...select.options].some(o => o.value === current)) select.value = 'all';
+}
+
+function applyQuickFilter(mode) {
+  const statusFilter = document.getElementById('statusFilter');
+  const dateFilter = document.getElementById('dateFilter');
+  const driverFilter = document.getElementById('driverFilter');
+  const search = document.getElementById('searchReservation');
+  if (search) search.value = '';
+  if (statusFilter) statusFilter.value = 'all';
+  if (dateFilter) dateFilter.value = 'all';
+  if (driverFilter) driverFilter.value = 'all';
+  if (mode === 'pending' && statusFilter) statusFilter.value = 'pending';
+  if (mode === 'today' && dateFilter) dateFilter.value = 'today';
+  if (mode === 'unassigned' && driverFilter) driverFilter.value = 'none';
+  if (mode === 'in_progress' && statusFilter) statusFilter.value = 'on_the_way';
+  document.querySelectorAll('.quick-filter').forEach((btn) => btn.classList.toggle('active', btn.dataset.quick === mode));
+  renderReservations();
+}
+
+function resetAdminFilters() {
+  ['searchReservation','tripFilter','statusFilter','dateFilter','driverFilter','sortFilter'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'INPUT') el.value = '';
+  });
+  const trip = document.getElementById('tripFilter'); if (trip) trip.value = 'all';
+  const status = document.getElementById('statusFilter'); if (status) status.value = 'all';
+  const date = document.getElementById('dateFilter'); if (date) date.value = 'all';
+  const driver = document.getElementById('driverFilter'); if (driver) driver.value = 'all';
+  const sort = document.getElementById('sortFilter'); if (sort) sort.value = 'datetime_asc';
+  applyQuickFilter('all');
+}
+
 function renderDriversMiniList() {
   const list = document.getElementById('driversList');
   if (!list) return;
+  updateDriverFilterOptions();
   if (!driversCache.length) {
     list.innerHTML = '<p class="small-muted">Aucun chauffeur ajouté.</p>';
     return;
   }
 
-  list.innerHTML = driversCache.map((driver) => `
-    <div class="driver-mini-card">
-      <div>
-        <strong>${escapeHtml(driver.name || 'Sans nom')}</strong>
-        <p>${escapeHtml(driver.phone || '—')} • ${escapeHtml(driver.car || '—')}</p>
+  list.innerHTML = driversCache.map((driver) => {
+    const assignedCount = reservationsCache.filter((r) => r.driverId === driver.id && ['assigned','accepted','on_the_way'].includes(normalizeStatus(r.status))).length;
+    const doneCount = reservationsCache.filter((r) => r.driverId === driver.id && normalizeStatus(r.status) === 'completed').length;
+    return `
+      <div class="driver-mini-card ${driver.active === false ? 'driver-offline' : ''}">
+        <div>
+          <strong>${escapeHtml(driver.name || 'Sans nom')}</strong>
+          <p>${escapeHtml(driver.phone || '—')} • ${escapeHtml(driver.car || '—')}</p>
+          <div class="driver-mini-stats">
+            <span>${driver.active === false ? 'Hors ligne' : 'Actif'}</span>
+            <span>${assignedCount} course(s) active(s)</span>
+            <span>${doneCount} terminée(s)</span>
+          </div>
+        </div>
+        <div class="driver-mini-actions">
+          ${driver.phone ? `<a class="action-link" href="tel:${escapeHtml(String(driver.phone).replace(/\s+/g,''))}"><i class="fa fa-phone"></i>Appeler</a>` : ''}
+          <button class="secondary-btn small-btn toggle-driver-btn" data-driver-id="${escapeHtml(driver.id)}" data-driver-active="${driver.active === false ? '0' : '1'}">
+            ${driver.active === false ? 'Réactiver' : 'Désactiver'}
+          </button>
+        </div>
       </div>
-      <button class="secondary-btn small-btn toggle-driver-btn" data-driver-id="${escapeHtml(driver.id)}" data-driver-active="${driver.active === false ? '0' : '1'}">
-        ${driver.active === false ? 'Réactiver' : 'Désactiver'}
-      </button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   list.querySelectorAll('.toggle-driver-btn').forEach((button) => {
     button.addEventListener('click', async () => {
@@ -612,6 +719,205 @@ function renderDriversMiniList() {
   });
 }
 
+
+function reservationDirectionValue(item) {
+  const raw = String(item?.direction || '').toLowerCase();
+  if (raw.includes('retour')) return 'retour';
+  return 'aller';
+}
+
+function getFilteredReservationsData() {
+  const searchValue = (document.getElementById('searchReservation')?.value || '').toLowerCase();
+  const tripFilter = document.getElementById('tripFilter')?.value || 'all';
+  const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+  const dateFilter = document.getElementById('dateFilter')?.value || 'all';
+  const driverFilter = document.getElementById('driverFilter')?.value || 'all';
+  const sortFilter = document.getElementById('sortFilter')?.value || 'datetime_asc';
+  const activeQuickFilter = document.querySelector('.quick-filter.active')?.dataset.quick || 'all';
+
+  return reservationsCache.filter((item) => {
+    const matchesSearch = reservationSearchBlob(item).includes(searchValue);
+    const tripType = item.groupId ? 'aller-retour' : (reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple');
+    const matchesTrip = tripFilter === 'all' || tripFilter === tripType;
+    const normalizedStatus = normalizeStatus(item.status);
+    const matchesStatus = statusFilter === 'all' || normalizedStatus === statusFilter;
+    const matchesDate = dateFilterMatch(item, dateFilter);
+    const matchesDriver = driverFilter === 'all' || (driverFilter === 'none' ? !item.driverId : item.driverId === driverFilter);
+    const matchesQuick = activeQuickFilter === 'all'
+      || (activeQuickFilter === 'urgent' ? reservationIsUrgent(item) : true);
+    return matchesSearch && matchesTrip && matchesStatus && matchesDate && matchesDriver && matchesQuick;
+  }).sort((a, b) => compareReservations(a, b, sortFilter));
+}
+
+function exportReservationsCsv() {
+  const rows = getFilteredReservationsData();
+  const headers = [
+    'Client','Telephone','Email','DateHeure','Direction','Statut','Chauffeur',
+    'Depart','Arrivee','Passagers','Valises','Vol','Urgent','Groupe','CourseLiee','NoteAdmin'
+  ];
+  const escapeCsv = (value) => {
+    const text = String(value ?? '');
+    return '"' + text.replace(/"/g, '""') + '"';
+  };
+  const lines = [headers.join(',')];
+  rows.forEach((item) => {
+    lines.push([
+      reservationName(item) || '',
+      reservationPhone(item) || '',
+      item.email || '',
+      formatDateTime(reservationDateTime(item)),
+      reservationDirection(item),
+      statusLabel(item.status),
+      item.driverName || '',
+      reservationPickup(item) || '',
+      reservationDropoff(item) || '',
+      reservationPassengers(item),
+      reservationLuggage(item),
+      reservationFlightNumber(item) || '',
+      reservationIsUrgent(item) ? 'Oui' : 'Non',
+      item.groupId || '',
+      item.linkedTripId || '',
+      item.adminNote || item.notes || ''
+    ].map(escapeCsv).join(','));
+  });
+  const csv = '\ufeff' + lines.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'dispatch-taxi-live-sorel-tracy.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function printDispatchPlanning() {
+  const rows = getFilteredReservationsData();
+  const body = rows.map((item) => `
+    <tr>
+      <td>${escapeHtml(formatDateTime(reservationDateTime(item)))}</td>
+      <td>${escapeHtml(reservationName(item) || '—')}</td>
+      <td>${escapeHtml(reservationPhone(item) || '—')}</td>
+      <td>${escapeHtml(reservationPickup(item) || '—')}</td>
+      <td>${escapeHtml(reservationDropoff(item) || '—')}</td>
+      <td>${escapeHtml(reservationDirection(item))}</td>
+      <td>${escapeHtml(statusLabel(item.status))}</td>
+      <td>${escapeHtml(item.driverName || 'Sans chauffeur')}</td>
+    </tr>
+  `).join('');
+  const win = window.open('', '_blank');
+  if (!win) return alert('Impossible d’ouvrir la fenêtre d’impression.');
+  win.document.write(`
+    <html><head><title>Planning dispatch</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:24px;color:#111}
+      h1{margin:0 0 8px}
+      p{margin:0 0 18px;color:#555}
+      table{width:100%;border-collapse:collapse}
+      th,td{border:1px solid #ddd;padding:8px;font-size:12px;text-align:left;vertical-align:top}
+      th{background:#f4f4f4}
+    </style></head><body>
+      <h1>Planning Dispatch - Taxi Live Sorel-Tracy</h1>
+      <p>Généré le ${escapeHtml(formatDateTime(new Date()))}</p>
+      <table>
+        <thead><tr><th>Date/heure</th><th>Client</th><th>Téléphone</th><th>Départ</th><th>Arrivée</th><th>Direction</th><th>Statut</th><th>Chauffeur</th></tr></thead>
+        <tbody>${body || '<tr><td colspan="8">Aucune réservation.</td></tr>'}</tbody>
+      </table>
+    </body></html>
+  `);
+  win.document.close();
+  win.focus();
+  win.print();
+}
+
+function renderTodayTimeline() {
+  const box = document.getElementById('todayTimeline');
+  if (!box) return;
+  const items = reservationsCache
+    .filter((item) => {
+      const d = reservationDateObject(item);
+      return d && isToday(d);
+    })
+    .sort((a,b) => compareReservations(a,b,'datetime_asc'))
+    .slice(0, 12);
+
+  if (!items.length) {
+    box.innerHTML = '<p class="small-muted">Aucune course aujourd’hui.</p>';
+    return;
+  }
+
+  box.innerHTML = items.map((item) => {
+    const d = reservationDateObject(item);
+    const overdue = d && d.getTime() < Date.now() && !['completed','cancelled'].includes(normalizeStatus(item.status));
+    const hhmm = d ? d.toLocaleTimeString('fr-CA', { hour:'2-digit', minute:'2-digit' }) : '—';
+    return `
+      <div class="timeline-item ${overdue ? 'overdue' : ''}">
+        <div class="timeline-time">${escapeHtml(hhmm)}</div>
+        <div class="timeline-route">
+          <strong>${escapeHtml(reservationName(item) || 'Client')}</strong>
+          ${escapeHtml(reservationPickup(item) || '—')} → ${escapeHtml(reservationDropoff(item) || '—')}
+        </div>
+        <div class="timeline-status">${escapeHtml(item.driverName || statusLabel(item.status))}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDriverLoadBoard() {
+  const box = document.getElementById('driverLoadBoard');
+  if (!box) return;
+  if (!driversCache.length) {
+    box.innerHTML = '<p class="small-muted">Aucun chauffeur ajouté.</p>';
+    return;
+  }
+  const activeStatuses = ['assigned','accepted','on_the_way'];
+  const totals = driversCache.map((driver) => {
+    const activeCount = reservationsCache.filter((r) => r.driverId === driver.id && activeStatuses.includes(normalizeStatus(r.status))).length;
+    const completedCount = reservationsCache.filter((r) => r.driverId === driver.id && normalizeStatus(r.status) === 'completed').length;
+    return { driver, activeCount, completedCount };
+  });
+  const maxLoad = Math.max(1, ...totals.map((x) => x.activeCount));
+  box.innerHTML = totals.map(({driver, activeCount, completedCount}) => {
+    const pct = Math.max(8, Math.round((activeCount / maxLoad) * 100));
+    return `
+      <div class="driver-load-item">
+        <div class="driver-load-top">
+          <div>
+            <strong>${escapeHtml(driver.name || 'Sans nom')}</strong>
+            <div class="driver-load-meta">
+              <span>${driver.active === false ? 'Hors ligne' : 'Actif'}</span>
+              <span>${escapeHtml(driver.phone || '—')}</span>
+              <span>${escapeHtml(driver.car || driver.carModel || '—')}</span>
+            </div>
+          </div>
+          <div><strong>${activeCount}</strong> active(s)</div>
+        </div>
+        <div class="load-bar"><div class="load-bar-fill" style="width:${pct}%"></div></div>
+        <div class="driver-load-meta" style="margin-top:.45rem;">
+          <span>${completedCount} terminée(s)</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateOperationsSummary() {
+  const nextHour = reservationsCache.filter((item) => {
+    const d = reservationDateObject(item);
+    return d && d.getTime() >= Date.now() && d.getTime() <= Date.now() + 3600 * 1000 && !['completed','cancelled'].includes(normalizeStatus(item.status));
+  }).length;
+  const tomorrow = reservationsCache.filter((item) => dateFilterMatch(item, 'tomorrow')).length;
+  const cancelled = reservationsCache.filter((item) => normalizeStatus(item.status) === 'cancelled').length;
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+  };
+  setText('statNextHour', nextHour);
+  setText('statTomorrow', tomorrow);
+  setText('statCancelled', cancelled);
+  renderTodayTimeline();
+  renderDriverLoadBoard();
+}
+
 function renderReservations() {
   const list = document.getElementById('reservationsList');
   if (!list) return;
@@ -619,29 +925,54 @@ function renderReservations() {
   const searchValue = (document.getElementById('searchReservation')?.value || '').toLowerCase();
   const tripFilter = document.getElementById('tripFilter')?.value || 'all';
   const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+  const dateFilter = document.getElementById('dateFilter')?.value || 'all';
+  const driverFilter = document.getElementById('driverFilter')?.value || 'all';
+  const sortFilter = document.getElementById('sortFilter')?.value || 'datetime_asc';
+  const activeQuickFilter = document.querySelector('.quick-filter.active')?.dataset.quick || 'all';
   const emptyState = document.getElementById('emptyState');
 
-  const filtered = reservationsCache.filter((item) => {
-    const matchesSearch = reservationSearchBlob(item).includes(searchValue);
-    const tripType = item.groupId ? 'aller-retour' : (reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple');
-    const matchesTrip = tripFilter === 'all' || tripFilter === tripType;
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    return matchesSearch && matchesTrip && matchesStatus;
-  });
+  updateDriverFilterOptions();
 
+  const filtered = getFilteredReservationsData();
   const setText = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.textContent = String(value);
   };
 
+  const groupedRoundTrips = new Set(reservationsCache.filter((item) => item.groupId).map((item) => item.groupId)).size;
+  const legacyRoundTrips = reservationsCache.filter((item) => !item.groupId && (item.roundTrip || item.allerRetour)).length;
+  const inProgressCount = reservationsCache.filter((item) => ['accepted','on_the_way'].includes(normalizeStatus(item.status))).length;
+  const completedCount = reservationsCache.filter((item) => normalizeStatus(item.status) === 'completed').length;
+  const urgentCount = reservationsCache.filter((item) => reservationIsUrgent(item)).length;
+  const noDriverCount = reservationsCache.filter((item) => !item.driverId && !['completed','cancelled'].includes(normalizeStatus(item.status))).length;
+
   setText('statTotal', reservationsCache.length);
-  setText('statRoundTrip', new Set(reservationsCache.filter((item) => item.groupId).map((item) => item.groupId)).size + reservationsCache.filter((item) => !item.groupId && (item.roundTrip || item.allerRetour)).length);
-  setText('statToday', reservationsCache.filter((item) => isToday(item.createdAt || item.createdAtClient)).length);
+  setText('statRoundTrip', groupedRoundTrips + legacyRoundTrips);
+  setText('statToday', reservationsCache.filter((item) => isToday(item.createdAt || item.createdAtClient || item.datetime)).length);
   setText('statPending', reservationsCache.filter((item) => normalizeStatus(item.status) === 'pending').length);
   setText('statAssigned', reservationsCache.filter((item) => normalizeStatus(item.status) === 'assigned').length);
+  setText('statInProgress', inProgressCount);
+  setText('statCompleted', completedCount);
+  setText('statUrgent', urgentCount);
+  setText('statNoDriver', noDriverCount);
   setText('statDrivers', driversCache.filter((driver) => driver.active !== false).length);
+  setText('reservationsSummary', `${filtered.length} réservation(s) affichée(s)`);
+
+  const nextUpcoming = reservationsCache
+    .filter((item) => {
+      const d = reservationDateObject(item);
+      return d && d.getTime() >= Date.now() && !['completed','cancelled'].includes(normalizeStatus(item.status));
+    })
+    .sort((a,b) => compareReservations(a,b,'datetime_asc'))[0];
+  const nextSummary = document.getElementById('nextCourseSummary');
+  if (nextSummary) {
+    nextSummary.textContent = nextUpcoming
+      ? `Prochaine course : ${reservationName(nextUpcoming) || 'Client'} • ${formatDateTime(reservationDateTime(nextUpcoming))}`
+      : 'Aucune course planifiée.';
+  }
 
   renderDriversMiniList();
+  updateOperationsSummary();
 
   if (!filtered.length) {
     list.innerHTML = '';
@@ -650,69 +981,97 @@ function renderReservations() {
   }
 
   if (emptyState) emptyState.style.display = 'none';
-  list.innerHTML = filtered.map((item) => `
-    <article class="reservation-card">
-      <div class="reservation-header">
-        <div>
-          <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
-          <p>${escapeHtml(reservationDirection(item))} • ${escapeHtml(reservationVehicle(item))} • ${escapeHtml(item.statusLabel)}</p>
+  list.innerHTML = filtered.map((item) => {
+    const normalizedStatus = normalizeStatus(item.status);
+    const urgent = reservationIsUrgent(item);
+    const phone = (reservationPhone(item) || '').replace(/\s+/g, '');
+    const pickup = reservationPickup(item) || '';
+    const dropoff = reservationDropoff(item) || '';
+    const mapUrl = pickup || dropoff
+      ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(dropoff)}`
+      : '#';
+    return `
+      <article class="reservation-card status-${escapeHtml(normalizedStatus)} ${urgent ? 'urgent' : ''}">
+        <div class="reservation-header">
+          <div>
+            <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
+            <div class="reservation-meta">
+              <span class="badge status-${escapeHtml(normalizedStatus)}">${escapeHtml(statusLabel(item.status))}</span>
+              <span class="badge direction">${escapeHtml(reservationDirection(item))}</span>
+              ${urgent ? '<span class="badge urgent"><i class="fa fa-bolt"></i>Urgente</span>' : ''}
+              <span class="badge driver">${escapeHtml(item.driverName || 'Sans chauffeur')}</span>
+              ${(() => { const d = reservationDateObject(item); if (!d) return ''; const diff = d.getTime() - Date.now(); const hours = Math.round(diff / 3600000); if (diff < 0 && !['completed','cancelled'].includes(normalizeStatus(item.status))) return '<span class="badge urgent">En retard</span>'; if (hours >= 0 && hours <= 2) return '<span class="badge status-assigned">Bientôt</span>'; return ''; })()}
+            </div>
+          </div>
+          <button class="danger-btn small-btn" data-delete-id="${escapeHtml(item.id)}">Supprimer</button>
         </div>
-        <button class="danger-btn small-btn" data-delete-id="${escapeHtml(item.id)}">Supprimer</button>
-      </div>
-      <div class="reservation-grid">
-        <div><strong>Téléphone :</strong> ${escapeHtml(reservationPhone(item) || '—')}</div>
-        <div><strong>Email :</strong> ${escapeHtml(item.email || '—')}</div>
-        <div><strong>Passagers :</strong> ${escapeHtml(reservationPassengers(item))}</div>
-        <div><strong>Valises :</strong> ${escapeHtml(reservationLuggage(item))}</div>
-        <div><strong>Vol :</strong> ${escapeHtml(reservationFlightNumber(item) || '—')}</div>
-        <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
-        <div><strong>Direction :</strong> ${escapeHtml(reservationDirection(item))}</div>
-        <div><strong>Groupe :</strong> ${escapeHtml(item.groupId || '—')}</div>
-        <div><strong>Course liée :</strong> ${escapeHtml(item.linkedTripId || '—')}</div>
-        <div><strong>Départ :</strong> ${escapeHtml(reservationPickup(item) || '—')}</div>
-        <div><strong>Arrivée :</strong> ${escapeHtml(reservationDropoff(item) || '—')}</div>
-        <div><strong>Créée le :</strong> ${escapeHtml(formatDateTime(item.createdAt || item.createdAtClient))}</div>
-        <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
-        <div><strong>Chauffeur :</strong> ${escapeHtml(item.driverName || 'Non assigné')}</div>
-        <div>
-          <strong>Assigner :</strong>
-          <select class="driver-select" data-driver-id="${escapeHtml(item.id)}">${driverOptionsHtml(item.driverId || '')}</select>
+
+        <div class="reservation-top-actions">
+          ${phone ? `<a class="action-link" href="tel:${escapeHtml(phone)}"><i class="fa fa-phone"></i>Appeler</a>` : ''}
+          ${item.email ? `<a class="action-link" href="mailto:${escapeHtml(item.email)}"><i class="fa fa-envelope"></i>Email</a>` : ''}
+          ${pickup || dropoff ? `<a class="action-link" href="${mapUrl}" target="_blank" rel="noopener"><i class="fa fa-route"></i>Voir trajet</a>` : ''}
+          <button type="button" class="action-link save-urgent-btn" data-urgent-id="${escapeHtml(item.id)}" data-urgent-value="${item.urgent ? '0' : '1'}"><i class="fa fa-star"></i>${item.urgent ? 'Retirer urgence' : 'Marquer urgent'}</button>
         </div>
-        <div>
-          <strong>Statut :</strong>
-          <select class="status-select" data-status-id="${escapeHtml(item.id)}">
-            <option value="pending" ${normalizeStatus(item.status) === 'pending' ? 'selected' : ''}>En attente</option>
-            <option value="assigned" ${normalizeStatus(item.status) === 'assigned' ? 'selected' : ''}>Assignée</option>
-            <option value="accepted" ${normalizeStatus(item.status) === 'accepted' ? 'selected' : ''}>Acceptée</option>
-            <option value="on_the_way" ${normalizeStatus(item.status) === 'on_the_way' ? 'selected' : ''}>En route</option>
-            <option value="completed" ${normalizeStatus(item.status) === 'completed' ? 'selected' : ''}>Terminée</option>
-            <option value="cancelled" ${normalizeStatus(item.status) === 'cancelled' ? 'selected' : ''}>Annulée</option>
-          </select>
+
+        <h4 class="card-section-title">Détails course</h4>
+        <div class="reservation-grid compact-grid">
+          <div><strong>Téléphone :</strong> ${escapeHtml(reservationPhone(item) || '—')}</div>
+          <div><strong>Email :</strong> ${escapeHtml(item.email || '—')}</div>
+          <div><strong>Passagers :</strong> ${escapeHtml(reservationPassengers(item))}</div>
+          <div><strong>Valises :</strong> ${escapeHtml(reservationLuggage(item))}</div>
+          <div><strong>Vol :</strong> ${escapeHtml(reservationFlightNumber(item) || '—')}</div>
+          <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
+          <div><strong>Départ :</strong> ${escapeHtml(pickup || '—')}</div>
+          <div><strong>Arrivée :</strong> ${escapeHtml(dropoff || '—')}</div>
+          <div><strong>Créée le :</strong> ${escapeHtml(formatDateTime(item.createdAt || item.createdAtClient))}</div>
+          <div><strong>Source :</strong> ${escapeHtml(item.source || 'site-web')}</div>
+          <div><strong>Groupe :</strong> ${escapeHtml(item.groupId || '—')}</div>
+          <div><strong>Course liée :</strong> ${escapeHtml(item.linkedTripId || '—')}</div>
         </div>
-      </div>
-      ${(!item.groupId && reservationRoundTrip(item)) ? `
-        <div class="retour-summary">
-          <h4>Retour</h4>
-          <p><strong>Départ :</strong> ${escapeHtml(item.retourDepart || '—')}</p>
-          <p><strong>Arrivée :</strong> ${escapeHtml(item.retourArrivee || '—')}</p>
-          <p><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationReturnDateTime(item)))}</p>
-          <p><strong>Vol retour :</strong> ${escapeHtml(item.retourNumeroVol || '—')}</p>
-          <p><strong>Détails :</strong> ${escapeHtml(item.retourDetails || '—')}</p>
+
+        <h4 class="card-section-title">Gestion dispatch</h4>
+        <div class="reservation-grid compact-grid">
+          <div>
+            <strong>Assigner :</strong>
+            <select class="driver-select" data-driver-id="${escapeHtml(item.id)}">${driverOptionsHtml(item.driverId || '')}</select>
+          </div>
+          <div>
+            <strong>Statut :</strong>
+            <select class="status-select" data-status-id="${escapeHtml(item.id)}">
+              <option value="pending" ${normalizedStatus === 'pending' ? 'selected' : ''}>En attente</option>
+              <option value="assigned" ${normalizedStatus === 'assigned' ? 'selected' : ''}>Assignée</option>
+              <option value="accepted" ${normalizedStatus === 'accepted' ? 'selected' : ''}>Acceptée</option>
+              <option value="on_the_way" ${normalizedStatus === 'on_the_way' ? 'selected' : ''}>En route</option>
+              <option value="completed" ${normalizedStatus === 'completed' ? 'selected' : ''}>Terminée</option>
+              <option value="cancelled" ${normalizedStatus === 'cancelled' ? 'selected' : ''}>Annulée</option>
+            </select>
+          </div>
+          <div class="admin-note-box" style="grid-column:1/-1;">
+            <label><input type="checkbox" class="urgent-toggle" data-urgent-checkbox-id="${escapeHtml(item.id)}" ${item.urgent ? 'checked' : ''}> Priorité haute / urgence</label>
+            <textarea class="admin-note-text" data-note-id="${escapeHtml(item.id)}" placeholder="Notes admin / consignes chauffeur / infos client...">${escapeHtml(item.adminNote || item.notes || '')}</textarea>
+            <div class="reservation-inline-actions" style="margin-top:.6rem;">
+              <button type="button" class="secondary-btn small-btn save-note-btn" data-save-note-id="${escapeHtml(item.id)}">Enregistrer la note</button>
+            </div>
+          </div>
         </div>
-      ` : ''}
-    </article>
-  `).join('');
+
+        <div class="quick-status-row" style="margin-top:1rem;">
+          <button type="button" class="quick-status-btn" data-quick-status="pending" data-quick-id="${escapeHtml(item.id)}">Remettre en attente</button>
+          <button type="button" class="quick-status-btn" data-quick-status="assigned" data-quick-id="${escapeHtml(item.id)}">Assigner</button>
+          <button type="button" class="quick-status-btn" data-quick-status="on_the_way" data-quick-id="${escapeHtml(item.id)}">En route</button>
+          <button type="button" class="quick-status-btn" data-quick-status="completed" data-quick-id="${escapeHtml(item.id)}">Terminer</button>
+        </div>
+      </article>
+    `;
+  }).join('');
 
   list.querySelectorAll('[data-delete-id]').forEach((button) => {
     button.addEventListener('click', async () => {
       const id = button.getAttribute('data-delete-id');
       if (!id || !db) return;
       if (!confirm('Supprimer cette réservation ?')) return;
-      try {
-        await db.collection(RESERVATIONS_COLLECTION).doc(id).delete();
-      } catch (error) {
-        alert('Suppression impossible : ' + (error.message || 'erreur'));
-      }
+      try { await db.collection(RESERVATIONS_COLLECTION).doc(id).delete(); }
+      catch (error) { alert('Suppression impossible : ' + (error.message || 'erreur')); }
     });
   });
 
@@ -720,13 +1079,8 @@ function renderReservations() {
     select.addEventListener('change', async () => {
       const id = select.getAttribute('data-status-id');
       if (!id || !db) return;
-      try {
-        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({
-          status: select.value
-        });
-      } catch (error) {
-        alert('Mise à jour impossible : ' + (error.message || 'erreur'));
-      }
+      try { await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: select.value }); }
+      catch (error) { alert('Mise à jour impossible : ' + (error.message || 'erreur')); }
     });
   });
 
@@ -745,6 +1099,47 @@ function renderReservations() {
       } catch (error) {
         alert('Assignation impossible : ' + (error.message || 'erreur'));
       }
+    });
+  });
+
+  list.querySelectorAll('.save-note-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.getAttribute('data-save-note-id');
+      const textarea = list.querySelector(`.admin-note-text[data-note-id="${id}"]`);
+      const urgent = list.querySelector(`.urgent-toggle[data-urgent-checkbox-id="${id}"]`)?.checked || false;
+      if (!id || !db || !textarea) return;
+      button.disabled = true;
+      const old = button.textContent;
+      button.textContent = 'Enregistrement...';
+      try {
+        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ adminNote: textarea.value.trim(), urgent });
+        button.textContent = 'Enregistré';
+        setTimeout(() => { button.textContent = old; button.disabled = false; }, 800);
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = old;
+        alert('Enregistrement impossible : ' + (error.message || 'erreur'));
+      }
+    });
+  });
+
+  list.querySelectorAll('.save-urgent-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.getAttribute('data-urgent-id');
+      const next = button.getAttribute('data-urgent-value') === '1';
+      if (!id || !db) return;
+      try { await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ urgent: next }); }
+      catch (error) { alert('Mise à jour impossible : ' + (error.message || 'erreur')); }
+    });
+  });
+
+  list.querySelectorAll('[data-quick-id]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.getAttribute('data-quick-id');
+      const status = button.getAttribute('data-quick-status');
+      if (!id || !db || !status) return;
+      try { await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status }); }
+      catch (error) { alert('Mise à jour impossible : ' + (error.message || 'erreur')); }
     });
   });
 }
@@ -976,6 +1371,13 @@ function initDashboardPage() {
   document.getElementById('searchReservation')?.addEventListener('input', renderReservations);
   document.getElementById('tripFilter')?.addEventListener('change', renderReservations);
   document.getElementById('statusFilter')?.addEventListener('change', renderReservations);
+  document.getElementById('dateFilter')?.addEventListener('change', renderReservations);
+  document.getElementById('driverFilter')?.addEventListener('change', renderReservations);
+  document.getElementById('sortFilter')?.addEventListener('change', renderReservations);
+  document.getElementById('resetFiltersBtn')?.addEventListener('click', resetAdminFilters);
+  document.querySelectorAll('.quick-filter').forEach((btn) => {
+    btn.addEventListener('click', () => applyQuickFilter(btn.dataset.quick || 'all'));
+  });
 
   document.getElementById('driverForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1031,6 +1433,19 @@ function initDashboardPage() {
     a.download = 'reservations-taxi-etoile-firebase.json';
     a.click();
     URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('exportCsvBtn')?.addEventListener('click', exportReservationsCsv);
+  document.getElementById('printDispatchBtn')?.addEventListener('click', printDispatchPlanning);
+  document.getElementById('showTodayBtn')?.addEventListener('click', () => {
+    const date = document.getElementById('dateFilter');
+    if (date) date.value = 'today';
+    applyQuickFilter('today');
+  });
+  document.getElementById('showUnassignedBtn')?.addEventListener('click', () => {
+    const driver = document.getElementById('driverFilter');
+    if (driver) driver.value = 'none';
+    applyQuickFilter('unassigned');
   });
 
   auth.onAuthStateChanged(async (user) => {
