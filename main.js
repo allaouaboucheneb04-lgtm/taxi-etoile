@@ -1065,9 +1065,50 @@ function initDriverPage() {
   });
 }
 
+
+function initSecretLauncher() {
+  const logo = document.querySelector('.logo');
+  if (!logo || document.getElementById('secretLauncher')) return;
+
+  const launcher = document.createElement('div');
+  launcher.id = 'secretLauncher';
+  launcher.className = 'secret-launcher';
+  launcher.innerHTML = `
+    <div class="secret-launcher-card">
+      <h3>Accès rapide</h3>
+      <p>Ouvre directement l'espace admin ou chauffeur.</p>
+      <div class="secret-launcher-actions">
+        <a href="acces-admin-taxi-live.html">Admin</a>
+        <a href="chauffeurs.html">Chauffeur</a>
+        <button type="button" class="secondary" id="secretLauncherClose">Fermer</button>
+      </div>
+      <div class="secret-hint">Astuce : touche l'étoile 5 fois pour rouvrir ce menu.</div>
+    </div>`;
+  document.body.appendChild(launcher);
+
+  const closeBtn = launcher.querySelector('#secretLauncherClose');
+  closeBtn?.addEventListener('click', () => launcher.classList.remove('open'));
+  launcher.addEventListener('click', (e) => {
+    if (e.target === launcher) launcher.classList.remove('open');
+  });
+
+  let tapCount = 0;
+  let tapTimer = null;
+  logo.addEventListener('click', () => {
+    tapCount += 1;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => { tapCount = 0; }, 1600);
+    if (tapCount >= 5) {
+      tapCount = 0;
+      launcher.classList.add('open');
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initThemeAndPwa();
   initFirebase();
+  initSecretLauncher();
   initReservationPage();
   initDashboardPage();
   initDriverPage();
