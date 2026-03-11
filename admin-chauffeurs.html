@@ -50,10 +50,6 @@
         <p class="small-muted" id="adminBadge"></p>
         <p class="small-muted" id="syncStatus">Connexion en cours…</p>
       </div>
-      <div class="admin-topbar-actions">
-        <button id="enableAdminNotificationsBtn" class="secondary-btn">Activer les notifications admin</button>
-        <button id="logoutBtn" class="secondary-btn">Déconnexion</button>
-      </div>
     </div>
     <div class="admin-shell">
       <aside class="admin-sidebar" id="adminSidebarPanel">
@@ -78,6 +74,10 @@
         <a href="admin-clients.html" class="admin-nav-link"><i class="fa fa-address-book"></i><span>Clients</span></a>
         <a href="admin-chauffeurs.html" class="admin-nav-link active"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
         <a href="admin-outils.html" class="admin-nav-link"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
+        <div class="admin-menu-utilities">
+          <button id="enableAdminNotificationsBtn" class="admin-menu-action"><i class="fa fa-bell"></i><span>Activer les notifications admin</span></button>
+          <button id="logoutBtn" class="admin-menu-action admin-menu-action-danger"><i class="fa fa-right-from-bracket"></i><span>Déconnexion</span></button>
+        </div>
         <div class="admin-side-note">
           <strong>Conseil dispatch</strong>
           <p>Commence par le Dashboard, gère les urgences dans Réservations, suis le Planning, puis équilibre la charge dans Chauffeurs.</p>
