@@ -26,7 +26,11 @@ header.hero .logo {
   gap: 10px;
 }
 
-header.hero .logo svg { width:50px; height:50px; }
+header.hero .logo img { width:88px; height:88px; object-fit:contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18)); }
+
+@media (max-width: 640px) {
+  header.hero .logo img { width:72px; height:72px; }
+}
 
 header.hero nav.menu {
   display: flex;
