@@ -1,7 +1,7 @@
 {
-  "name": "Taxi Étoile Montréal",
-  "short_name": "Taxi Étoile",
-  "description": "Réservez votre taxi rapidement et installez l'application sur iPhone et Android.",
+  "name": "Taxi Live Sorel-Tracy",
+  "short_name": "Taxi Live",
+  "description": "Taxi à Sorel-Tracy, Montréal et aéroport. Réservation rapide 24/7.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

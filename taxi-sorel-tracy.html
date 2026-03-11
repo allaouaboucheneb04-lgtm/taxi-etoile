@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taxi Sorel-Tracy | Réservation rapide 24/7 | Taxi Live Sorel-Tracy</title>
+<meta name="description" content="Réservez un taxi à Sorel-Tracy avec Taxi Live Sorel-Tracy. Service local, longue distance et réservation simple 24/7.">
+<meta name="keywords" content="taxi sorel-tracy, taxi sorel, taxi tracy, réservation taxi sorel-tracy, taxi local sorel">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://allaouaboucheneb04-lgtm.github.io/taxi-etoile/taxi-sorel-tracy.html">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFCA28">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<header class="hero">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="#FFD700"><path d="M12 .587l3.668 7.431 8.21 1.194-5.938 5.788 1.402 8.172L12 18.896l-7.342 3.856 1.402-8.172L.122 9.212l8.21-1.194z"/></svg>
+    <h1>Taxi Live Sorel-Tracy</h1>
+  </div>
+  <nav class="menu">
+    <a href="index.html">Réservation</a>
+    <a href="taxi-sorel-tracy.html">Taxi Sorel-Tracy</a>
+    <a href="taxi-aeroport-montreal-depuis-sorel.html">Taxi Aéroport</a>
+    <a href="services.html">Services</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+  <p>Taxi Sorel-Tracy disponible 24/7 pour vos déplacements locaux et régionaux.</p>
+</header>
+<div class="container">
+<section class="seo-box">
+  <h2>Taxi Sorel-Tracy</h2>
+  <p>Taxi Live Sorel-Tracy propose un service de taxi fiable pour les déplacements à Sorel-Tracy, Tracy et les environs. Que ce soit pour le travail, les rendez-vous, les courses ou un retour en soirée, vous pouvez réserver rapidement en ligne.</p>
+  <p>Notre service convient aux clients qui recherchent un <strong>taxi à Sorel-Tracy</strong>, un transport ponctuel et une réservation simple depuis leur téléphone.</p>
+</section>
+<section class="service-box">
+  <h3><i class="fa fa-location-dot"></i> Zones desservies</h3>
+  <p>Sorel-Tracy, Tracy, Saint-Joseph-de-Sorel et trajets vers Montréal, Longueuil et la Rive-Sud.</p>
+</section>
+<section class="service-box">
+  <h3><i class="fa fa-clock"></i> Réservation rapide</h3>
+  <p>Réservez votre taxi à l'avance ou demandez un transport selon la disponibilité. Le formulaire de réservation principal reste accessible depuis la page d'accueil.</p>
+</section>
+<p><a href="index.html">Réserver maintenant</a> | <a href="taxi-aeroport-montreal-depuis-sorel.html">Besoin d'un taxi aéroport Montréal depuis Sorel ?</a></p>
+
+</div>
+<button id="installBtn" class="install-btn" style="display:none;">📲 Ajouter à l'écran d'accueil</button>
+<script>
+const installBtn=document.getElementById('installBtn');
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;installBtn.style.display='block';});
+installBtn.addEventListener('click',async()=>{installBtn.style.display='none'; if(deferredPrompt){deferredPrompt.prompt(); deferredPrompt=null;}});
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'});}
+</script>
+</body>
+</html>

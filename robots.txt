@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://allaouaboucheneb04-lgtm.github.io/taxi-etoile/sitemap.xml

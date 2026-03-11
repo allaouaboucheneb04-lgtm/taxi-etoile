@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taxi aéroport Montréal depuis Sorel | Taxi Live Sorel-Tracy</title>
+<meta name="description" content="Taxi aéroport Montréal depuis Sorel-Tracy. Réservez votre transport vers YUL avec Taxi Live Sorel-Tracy, service fiable 24/7.">
+<meta name="keywords" content="taxi aéroport montréal depuis sorel, taxi yul sorel-tracy, transport aéroport sorel montréal, taxi montréal-trudeau sorel">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://allaouaboucheneb04-lgtm.github.io/taxi-etoile/taxi-aeroport-montreal-depuis-sorel.html">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFCA28">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<header class="hero">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="#FFD700"><path d="M12 .587l3.668 7.431 8.21 1.194-5.938 5.788 1.402 8.172L12 18.896l-7.342 3.856 1.402-8.172L.122 9.212l8.21-1.194z"/></svg>
+    <h1>Taxi Live Sorel-Tracy</h1>
+  </div>
+  <nav class="menu">
+    <a href="index.html">Réservation</a>
+    <a href="taxi-sorel-tracy.html">Taxi Sorel-Tracy</a>
+    <a href="taxi-aeroport-montreal-depuis-sorel.html">Taxi Aéroport</a>
+    <a href="services.html">Services</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+  <p>Transfert fiable entre Sorel-Tracy et l’aéroport Montréal-Trudeau (YUL).</p>
+</header>
+<div class="container">
+<section class="seo-box">
+  <h2>Taxi aéroport Montréal depuis Sorel</h2>
+  <p>Besoin d’un <strong>taxi aéroport Montréal depuis Sorel</strong> ? Taxi Live Sorel-Tracy offre un service de transport planifié vers l’aéroport Montréal-Trudeau pour les départs tôt le matin, les retours tardifs et les voyages d’affaires.</p>
+  <p>Indiquez votre numéro de vol, votre heure de départ et vos bagages dans le formulaire de réservation pour faciliter la prise en charge.</p>
+</section>
+<section class="service-box">
+  <h3><i class="fa fa-plane-departure"></i> Départ vers YUL</h3>
+  <p>Transport direct de Sorel-Tracy vers l’aéroport Montréal-Trudeau avec réservation à l’avance recommandée.</p>
+</section>
+<section class="service-box">
+  <h3><i class="fa fa-plane-arrival"></i> Retour depuis l’aéroport</h3>
+  <p>Nous pouvons aussi prévoir votre retour vers Sorel-Tracy avec les informations de vol et le point de rencontre.</p>
+</section>
+<section class="service-box">
+  <h3><i class="fa fa-suitcase"></i> Bagages et groupes</h3>
+  <p>Choisissez berline ou van selon le nombre de passagers et de valises.</p>
+</section>
+<p><a href="index.html">Réserver un taxi aéroport</a> | <a href="taxi-sorel-tracy.html">Voir la page Taxi Sorel-Tracy</a></p>
+
+</div>
+<button id="installBtn" class="install-btn" style="display:none;">📲 Ajouter à l'écran d'accueil</button>
+<script>
+const installBtn=document.getElementById('installBtn');
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;installBtn.style.display='block';});
+installBtn.addEventListener('click',async()=>{installBtn.style.display='none'; if(deferredPrompt){deferredPrompt.prompt(); deferredPrompt=null;}});
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'});}
+</script>
+</body>
+</html>
