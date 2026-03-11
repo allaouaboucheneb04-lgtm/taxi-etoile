@@ -1108,3 +1108,127 @@ header.hero .logo h1 {
     width:100%;
   }
 }
+
+/* --- Admin & chauffeur pro usability upgrade --- */
+.driver-pro-app .hero,
+.admin-pro-app .hero {
+  padding-bottom: 1.2rem;
+}
+
+.driver-operations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.driver-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: .85rem;
+}
+.driver-profile-grid div {
+  background: rgba(255,255,255,.6);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 14px;
+  padding: .85rem;
+  display:flex;
+  flex-direction:column;
+  gap:.2rem;
+}
+.driver-profile-grid strong { font-size: .84rem; color:#555; }
+.driver-profile-grid span { font-weight: 700; color:#111; word-break: break-word; }
+
+.next-trip-box {
+  background: linear-gradient(180deg, rgba(255,202,40,.22), rgba(255,255,255,.9));
+  border: 1px solid rgba(255,202,40,.5);
+  border-radius: 16px;
+  padding: 1rem;
+}
+.next-trip-main {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.8rem;
+  margin-bottom:.55rem;
+}
+.next-trip-main strong { font-size:1.03rem; }
+.next-trip-route { font-weight:700; margin-bottom:.7rem; }
+.compact-actions { gap:.45rem; flex-wrap: wrap; }
+
+.driver-filter-card { margin-bottom: 1rem; }
+.driver-filter-grid {
+  display:grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(140px, .9fr));
+  gap:.7rem;
+}
+.driver-dispatch-toolbar {
+  display:flex;
+  flex-direction:column;
+  gap:.8rem;
+}
+.driver-stats-grid .stat-box strong { font-size:1.5rem; }
+
+.driver-reservation-card {
+  border-left: 5px solid rgba(255,202,40,.9);
+}
+.driver-card-time {
+  background:#111;
+  color:#fff;
+  padding:.45rem .7rem;
+  border-radius:999px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.driver-route-panel {
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap:.8rem;
+  align-items:center;
+  background:rgba(255,202,40,.14);
+  border:1px solid rgba(255,202,40,.45);
+  border-radius:16px;
+  padding:.9rem 1rem;
+  margin:.85rem 0;
+}
+.driver-route-panel div {
+  display:flex;
+  flex-direction:column;
+  gap:.18rem;
+}
+.driver-route-panel strong { color:#555; font-size:.82rem; }
+.driver-route-panel span { font-weight:700; }
+.route-arrow {
+  justify-content:center;
+  align-items:center;
+  font-size:1.2rem;
+  color:#333;
+}
+.driver-status-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.6rem;
+  margin-top:.85rem;
+}
+.driver-quick-status-btn {
+  background:#111;
+  color:#fff;
+  border:none;
+}
+.driver-quick-status-btn:hover { opacity:.92; }
+
+.module-hero-card .ghost-action,
+.action-link,
+.quick-status-btn,
+.secondary-btn,
+button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 820px) {
+  .driver-filter-grid { grid-template-columns: 1fr; }
+  .driver-route-panel { grid-template-columns: 1fr; }
+  .route-arrow { transform: rotate(90deg); }
+  .next-trip-main { flex-direction: column; align-items:flex-start; }
+  .driver-card-time { width: fit-content; }
+}

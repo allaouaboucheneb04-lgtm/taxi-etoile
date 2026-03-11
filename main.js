@@ -33,6 +33,7 @@ let unsubscribeDriverReservations = null;
 let currentUser = null;
 let currentAdminDoc = null;
 let currentDriverDoc = null;
+let driverQuickFilter = "all";
 
 const NOTIFICATION_STORAGE_KEYS = {
   adminEnabled: 'taxi_admin_notifications_enabled',
@@ -121,6 +122,30 @@ function reservationDirection(item) {
   return reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple';
 }
 
+function cleanPhoneNumber(value) {
+  return String(value || '').replace(/[^0-9+]/g, '');
+}
+
+function reservationSearchBlob(item) {
+  return [
+    reservationName(item), reservationPhone(item), reservationPickup(item), reservationDropoff(item), item.email, item.notes, item.adminNote, item.driverName
+  ].join(' ').toLowerCase();
+}
+
+function reservationMapUrl(item) {
+  const pickup = reservationPickup(item) || '';
+  const dropoff = reservationDropoff(item) || '';
+  if (!pickup && !dropoff) return '#';
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(dropoff)}`;
+}
+
+function reservationWhatsAppUrl(item) {
+  const phone = cleanPhoneNumber(reservationPhone(item));
+  if (!phone) return '';
+  const text = `Bonjour ${reservationName(item) || ''}, Taxi Live Sorel-Tracy pour votre course du ${formatDateTime(reservationDateTime(item))}. Départ: ${reservationPickup(item) || '—'} | Arrivée: ${reservationDropoff(item) || '—'}.`;
+  return `https://wa.me/${encodeURIComponent(phone)}?text=${encodeURIComponent(text)}`;
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -153,6 +178,18 @@ function isToday(value) {
   return date.getFullYear() === now.getFullYear()
     && date.getMonth() === now.getMonth()
     && date.getDate() === now.getDate();
+}
+
+function isTomorrow(value) {
+  let date = null;
+  if (value && typeof value?.toDate === 'function') date = value.toDate();
+  else if (value) date = new Date(value);
+  if (!date || Number.isNaN(date.getTime())) return false;
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return date.getFullYear() === tomorrow.getFullYear()
+    && date.getMonth() === tomorrow.getMonth()
+    && date.getDate() === tomorrow.getDate();
 }
 
 function showInlineMessage(id, text, isError = false) {
@@ -1105,8 +1142,11 @@ function renderReservations() {
 
         <div class="reservation-top-actions">
           ${phone ? `<a class="action-link" href="tel:${escapeHtml(phone)}"><i class="fa fa-phone"></i>Appeler</a>` : ''}
+          ${reservationWhatsAppUrl(item) ? `<a class="action-link" target="_blank" rel="noopener" href="${reservationWhatsAppUrl(item)}"><i class="fa fa-brands fa-whatsapp"></i>WhatsApp</a>` : ''}
           ${item.email ? `<a class="action-link" href="mailto:${escapeHtml(item.email)}"><i class="fa fa-envelope"></i>Email</a>` : ''}
           ${pickup || dropoff ? `<a class="action-link" href="${mapUrl}" target="_blank" rel="noopener"><i class="fa fa-route"></i>Voir trajet</a>` : ''}
+          <button type="button" class="action-link copy-dispatch-btn" data-copy-dispatch-id="${escapeHtml(item.id)}"><i class="fa fa-copy"></i>Copier</button>
+          ${!item.driverId ? `<button type="button" class="action-link auto-assign-btn" data-auto-assign-id="${escapeHtml(item.id)}"><i class="fa fa-user-plus"></i>Assigner dispo</button>` : ''}
           <button type="button" class="action-link save-urgent-btn" data-urgent-id="${escapeHtml(item.id)}" data-urgent-value="${item.urgent ? '0' : '1'}"><i class="fa fa-star"></i>${item.urgent ? 'Retirer urgence' : 'Marquer urgent'}</button>
         </div>
 
@@ -1199,6 +1239,55 @@ function renderReservations() {
     });
   });
 
+  list.querySelectorAll('.copy-dispatch-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.getAttribute('data-copy-dispatch-id');
+      const item = filtered.find((entry) => entry.id === id);
+      if (!item) return;
+      const text = `Taxi Live Dispatch
+Client: ${reservationName(item) || '—'}
+Téléphone: ${reservationPhone(item) || '—'}
+Date: ${formatDateTime(reservationDateTime(item))}
+Départ: ${reservationPickup(item) || '—'}
+Arrivée: ${reservationDropoff(item) || '—'}
+Chauffeur: ${item.driverName || 'Non assigné'}
+Statut: ${statusLabel(item.status)}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = 'Copié';
+        setTimeout(() => { button.innerHTML = '<i class="fa fa-copy"></i>Copier'; }, 900);
+      } catch (error) {
+        alert('Copie impossible');
+      }
+    });
+  });
+
+  list.querySelectorAll('.auto-assign-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.getAttribute('data-auto-assign-id');
+      if (!id || !db) return;
+      const availableDrivers = driversCache.filter((driver) => driver.active !== false).sort((a,b) => {
+        const ac = reservationsCache.filter((r) => r.driverId === a.id && ['assigned','accepted','on_the_way'].includes(normalizeStatus(r.status))).length;
+        const bc = reservationsCache.filter((r) => r.driverId === b.id && ['assigned','accepted','on_the_way'].includes(normalizeStatus(r.status))).length;
+        return ac - bc;
+      });
+      const driver = availableDrivers[0];
+      if (!driver) {
+        alert('Aucun chauffeur actif disponible.');
+        return;
+      }
+      try {
+        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({
+          driverId: driver.id,
+          driverName: driver.name || '',
+          status: 'assigned'
+        });
+      } catch (error) {
+        alert('Assignation impossible : ' + (error.message || 'erreur'));
+      }
+    });
+  });
+
   list.querySelectorAll('.save-note-btn').forEach((button) => {
     button.addEventListener('click', async () => {
       const id = button.getAttribute('data-save-note-id');
@@ -1241,6 +1330,86 @@ function renderReservations() {
   });
 }
 
+function applyDriverQuickFilter(mode = 'all') {
+  driverQuickFilter = mode;
+  document.querySelectorAll('.driver-quick-filter').forEach((btn) => {
+    btn.classList.toggle('active', (btn.dataset.driverQuick || 'all') === mode);
+  });
+  renderDriverReservations();
+}
+
+function driverMatchesFilters(item) {
+  const search = (document.getElementById('driverSearchReservation')?.value || '').trim().toLowerCase();
+  const statusFilter = document.getElementById('driverStatusFilter')?.value || 'all';
+  const dateFilter = document.getElementById('driverDateFilter')?.value || 'all';
+  const status = normalizeStatus(item.status);
+  const textOk = !search || reservationSearchBlob(item).includes(search);
+  const statusOk = statusFilter === 'all' || status === statusFilter;
+  const d = reservationDateObject(item);
+  const todayOk = dateFilter === 'all' || (
+    dateFilter === 'today' ? isToday(d) :
+    dateFilter === 'tomorrow' ? isTomorrow(d) :
+    dateFilter === 'upcoming' ? (d && d.getTime() >= Date.now()) :
+    dateFilter === 'past' ? (d && d.getTime() < Date.now()) : true
+  );
+  let quickOk = true;
+  if (driverQuickFilter === 'today') quickOk = isToday(d);
+  else if (driverQuickFilter === 'active') quickOk = ['assigned','accepted','on_the_way'].includes(status);
+  else if (driverQuickFilter === 'urgent') quickOk = reservationIsUrgent(item);
+  else if (driverQuickFilter === 'done') quickOk = status === 'completed';
+  return textOk && statusOk && todayOk && quickOk;
+}
+
+function updateDriverProfileUi() {
+  const data = currentDriverDoc || {};
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value || '—';
+  };
+  setText('driverProfileName', data.name || currentUser?.email || '—');
+  setText('driverProfilePhone', data.phone || '—');
+  setText('driverProfileCar', data.carModel || data.car || '—');
+  setText('driverProfileUid', data.id || currentUser?.uid || '—');
+  const badge = document.getElementById('driverAvailabilityBadge');
+  const btn = document.getElementById('driverAvailabilityBtn');
+  const available = data.active !== false;
+  if (badge) {
+    badge.textContent = available ? 'Actif' : 'Hors ligne';
+    badge.className = `badge ${available ? 'status-assigned' : 'urgent'}`;
+  }
+  if (btn) btn.textContent = available ? 'Passer hors ligne' : 'Passer en ligne';
+}
+
+function renderDriverNextTripBox(items) {
+  const box = document.getElementById('driverNextTripBox');
+  if (!box) return;
+  const next = [...items]
+    .filter((item) => {
+      const d = reservationDateObject(item);
+      return d && normalizeStatus(item.status) !== 'completed' && normalizeStatus(item.status) !== 'cancelled';
+    })
+    .sort((a,b) => compareReservations(a,b,'datetime_asc'))[0];
+  if (!next) {
+    box.innerHTML = '<p class="small-muted">Aucune course active pour le moment.</p>';
+    return;
+  }
+  const phone = cleanPhoneNumber(reservationPhone(next));
+  const wa = reservationWhatsAppUrl(next);
+  box.innerHTML = `
+    <div class="next-trip-content">
+      <div class="next-trip-main">
+        <strong>${escapeHtml(reservationName(next) || 'Client')}</strong>
+        <span>${escapeHtml(formatDateTime(reservationDateTime(next)))}</span>
+      </div>
+      <div class="next-trip-route">${escapeHtml(reservationPickup(next) || '—')} <i class="fa fa-arrow-right"></i> ${escapeHtml(reservationDropoff(next) || '—')}</div>
+      <div class="reservation-top-actions compact-actions">
+        ${phone ? `<a class="action-link" href="tel:${escapeHtml(phone)}"><i class="fa fa-phone"></i>Appeler</a>` : ''}
+        ${wa ? `<a class="action-link" target="_blank" rel="noopener" href="${wa}"><i class="fa fa-brands fa-whatsapp"></i>WhatsApp</a>` : ''}
+        <a class="action-link" target="_blank" rel="noopener" href="${reservationMapUrl(next)}"><i class="fa fa-route"></i>Trajet</a>
+      </div>
+    </div>`;
+}
+
 function renderDriverReservations() {
   const list = document.getElementById('driverReservationsList');
   if (!list) return;
@@ -1251,58 +1420,132 @@ function renderDriverReservations() {
     if (el) el.textContent = String(value);
   };
 
+  const todayCount = driverReservationsCache.filter((item) => isToday(reservationDateObject(item))).length;
+  const urgentCount = driverReservationsCache.filter((item) => reservationIsUrgent(item)).length;
   setText('driverStatTotal', driverReservationsCache.length);
   setText('driverStatAssigned', driverReservationsCache.filter((item) => normalizeStatus(item.status) === 'assigned').length);
   setText('driverStatInProgress', driverReservationsCache.filter((item) => ['accepted', 'on_the_way'].includes(normalizeStatus(item.status))).length);
   setText('driverStatDone', driverReservationsCache.filter((item) => normalizeStatus(item.status) === 'completed').length);
+  setText('driverStatToday', todayCount);
+  setText('driverStatUrgent', urgentCount);
 
-  if (!driverReservationsCache.length) {
+  updateDriverProfileUi();
+  renderDriverNextTripBox(driverReservationsCache);
+
+  const filtered = driverReservationsCache.filter(driverMatchesFilters).sort((a,b) => compareReservations(a,b,'datetime_asc'));
+
+  if (!filtered.length) {
     list.innerHTML = '';
     if (emptyState) emptyState.style.display = 'block';
     return;
   }
 
   if (emptyState) emptyState.style.display = 'none';
-  list.innerHTML = driverReservationsCache.map((item) => `
-    <article class="reservation-card">
+  list.innerHTML = filtered.map((item) => {
+    const phone = cleanPhoneNumber(reservationPhone(item));
+    const wa = reservationWhatsAppUrl(item);
+    const status = normalizeStatus(item.status);
+    const late = (() => {
+      const d = reservationDateObject(item);
+      return d && d.getTime() < Date.now() && !['completed','cancelled'].includes(status);
+    })();
+    return `
+    <article class="reservation-card driver-reservation-card status-${escapeHtml(status)} ${reservationIsUrgent(item) ? 'urgent' : ''}">
       <div class="reservation-header">
         <div>
           <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
-          <p>${escapeHtml(statusLabel(item.status))}</p>
+          <div class="reservation-meta">
+            <span class="badge status-${escapeHtml(status)}">${escapeHtml(statusLabel(item.status))}</span>
+            <span class="badge direction">${escapeHtml(reservationDirection(item))}</span>
+            ${reservationIsUrgent(item) ? '<span class="badge urgent"><i class="fa fa-bolt"></i>Urgente</span>' : ''}
+            ${late ? '<span class="badge urgent">En retard</span>' : ''}
+          </div>
         </div>
+        <div class="driver-card-time">${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
       </div>
-      <div class="reservation-grid">
+      <div class="driver-route-panel">
+        <div><strong>Départ</strong><span>${escapeHtml(reservationPickup(item) || '—')}</span></div>
+        <div class="route-arrow"><i class="fa fa-arrow-right"></i></div>
+        <div><strong>Arrivée</strong><span>${escapeHtml(reservationDropoff(item) || '—')}</span></div>
+      </div>
+      <div class="reservation-top-actions">
+        ${phone ? `<a class="action-link" href="tel:${escapeHtml(phone)}"><i class="fa fa-phone"></i>Appeler client</a>` : ''}
+        ${wa ? `<a class="action-link" target="_blank" rel="noopener" href="${wa}"><i class="fa fa-brands fa-whatsapp"></i>WhatsApp</a>` : ''}
+        <a class="action-link" target="_blank" rel="noopener" href="${reservationMapUrl(item)}"><i class="fa fa-route"></i>Itinéraire</a>
+        <button type="button" class="action-link copy-trip-btn" data-copy-id="${escapeHtml(item.id)}"><i class="fa fa-copy"></i>Copier</button>
+      </div>
+      <div class="reservation-grid compact-grid">
         <div><strong>Téléphone :</strong> ${escapeHtml(reservationPhone(item) || '—')}</div>
-        <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
-        <div><strong>Direction :</strong> ${escapeHtml(reservationDirection(item))}</div>
+        <div><strong>Passagers :</strong> ${escapeHtml(reservationPassengers(item))}</div>
+        <div><strong>Valises :</strong> ${escapeHtml(reservationLuggage(item))}</div>
+        <div><strong>Vol :</strong> ${escapeHtml(reservationFlightNumber(item) || '—')}</div>
         <div><strong>Groupe :</strong> ${escapeHtml(item.groupId || '—')}</div>
         <div><strong>Course liée :</strong> ${escapeHtml(item.linkedTripId || '—')}</div>
-        <div><strong>Départ :</strong> ${escapeHtml(reservationPickup(item) || '—')}</div>
-        <div><strong>Arrivée :</strong> ${escapeHtml(reservationDropoff(item) || '—')}</div>
-        <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
+        <div style="grid-column:1/-1;"><strong>Notes :</strong> ${escapeHtml(item.adminNote || item.notes || '—')}</div>
+      </div>
+      <div class="driver-status-actions">
+        <button type="button" class="quick-status-btn driver-quick-status-btn" data-driver-status-id="${escapeHtml(item.id)}" data-driver-status-value="accepted">Accepter</button>
+        <button type="button" class="quick-status-btn driver-quick-status-btn" data-driver-status-id="${escapeHtml(item.id)}" data-driver-status-value="on_the_way">En route</button>
+        <button type="button" class="quick-status-btn driver-quick-status-btn" data-driver-status-id="${escapeHtml(item.id)}" data-driver-status-value="completed">Terminer</button>
+      </div>
+      <div class="reservation-grid compact-grid" style="margin-top:.8rem;">
         <div>
           <strong>Statut :</strong>
           <select class="driver-status-select" data-status-id="${escapeHtml(item.id)}">
-            <option value="accepted" ${normalizeStatus(item.status) === 'accepted' ? 'selected' : ''}>Acceptée</option>
-            <option value="on_the_way" ${normalizeStatus(item.status) === 'on_the_way' ? 'selected' : ''}>En route</option>
-            <option value="completed" ${normalizeStatus(item.status) === 'completed' ? 'selected' : ''}>Terminée</option>
-            <option value="cancelled" ${normalizeStatus(item.status) === 'cancelled' ? 'selected' : ''}>Annulée</option>
+            <option value="assigned" ${status === 'assigned' ? 'selected' : ''}>Assignée</option>
+            <option value="accepted" ${status === 'accepted' ? 'selected' : ''}>Acceptée</option>
+            <option value="on_the_way" ${status === 'on_the_way' ? 'selected' : ''}>En route</option>
+            <option value="completed" ${status === 'completed' ? 'selected' : ''}>Terminée</option>
+            <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>Annulée</option>
           </select>
         </div>
       </div>
-    </article>
-  `).join('');
+    </article>`;
+  }).join('');
 
   list.querySelectorAll('.driver-status-select').forEach((select) => {
     select.addEventListener('change', async () => {
       const id = select.getAttribute('data-status-id');
       if (!id || !db) return;
       try {
-        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({
-          status: select.value
-        });
+        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: select.value });
       } catch (error) {
         alert('Mise à jour impossible : ' + (error.message || 'erreur'));
+      }
+    });
+  });
+
+  list.querySelectorAll('.driver-quick-status-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.getAttribute('data-driver-status-id');
+      const value = button.getAttribute('data-driver-status-value');
+      if (!id || !db || !value) return;
+      try {
+        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: value });
+      } catch (error) {
+        alert('Mise à jour impossible : ' + (error.message || 'erreur'));
+      }
+    });
+  });
+
+  list.querySelectorAll('.copy-trip-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const id = button.getAttribute('data-copy-id');
+      const item = filtered.find((entry) => entry.id === id);
+      if (!item) return;
+      const text = `Taxi Live
+Client: ${reservationName(item) || '—'}
+Téléphone: ${reservationPhone(item) || '—'}
+Date: ${formatDateTime(reservationDateTime(item))}
+Départ: ${reservationPickup(item) || '—'}
+Arrivée: ${reservationDropoff(item) || '—'}
+Notes: ${item.adminNote || item.notes || '—'}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = 'Copié';
+        setTimeout(() => { button.innerHTML = '<i class="fa fa-copy"></i>Copier'; }, 900);
+      } catch (error) {
+        alert('Copie impossible');
       }
     });
   });
@@ -1358,6 +1601,7 @@ async function verifyDriverAccess(user) {
   currentDriverDoc = { id: doc.id, ...data };
   const badge = document.getElementById('driverBadge');
   if (badge) badge.textContent = `${data.name || user.email} • ${data.phone || ''} • ${data.carModel || data.car || ''}`;
+  updateDriverProfileUi();
 }
 
 function subscribeDrivers() {
@@ -1602,6 +1846,34 @@ function initDriverPage() {
 
   document.getElementById('enableDriverNotificationsBtn')?.addEventListener('click', async () => {
     await enableNotificationsForRole('driver');
+  });
+
+  document.getElementById('driverAvailabilityBtn')?.addEventListener('click', async () => {
+    if (!db || !currentUser) return;
+    const next = !(currentDriverDoc?.active !== false);
+    try {
+      await db.collection(DRIVERS_COLLECTION).doc(currentUser.uid).set({
+        name: currentDriverDoc?.name || '',
+        email: currentDriverDoc?.email || currentUser.email || '',
+        phone: currentDriverDoc?.phone || '',
+        carModel: currentDriverDoc?.carModel || currentDriverDoc?.car || '',
+        active: next,
+        createdAt: currentDriverDoc?.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+        plate: currentDriverDoc?.plate || '',
+        photoUrl: currentDriverDoc?.photoUrl || ''
+      }, { merge: true });
+      currentDriverDoc = { ...(currentDriverDoc || {}), active: next };
+      updateDriverProfileUi();
+    } catch (error) {
+      alert('Impossible de changer le statut : ' + (error.message || 'erreur'));
+    }
+  });
+
+  document.getElementById('driverSearchReservation')?.addEventListener('input', renderDriverReservations);
+  document.getElementById('driverStatusFilter')?.addEventListener('change', renderDriverReservations);
+  document.getElementById('driverDateFilter')?.addEventListener('change', renderDriverReservations);
+  document.querySelectorAll('.driver-quick-filter').forEach((btn) => {
+    btn.addEventListener('click', () => applyDriverQuickFilter(btn.dataset.driverQuick || 'all'));
   });
 
   auth.onAuthStateChanged(async (user) => {
