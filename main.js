@@ -916,6 +916,103 @@ function updateOperationsSummary() {
   setText('statCancelled', cancelled);
   renderTodayTimeline();
   renderDriverLoadBoard();
+  renderPlanningBoards();
+  renderClientsBoard();
+}
+
+
+function renderPlanningBoards() {
+  const upcomingBoard = document.getElementById('upcomingTripsBoard');
+  const delayedBoard = document.getElementById('delayedTripsBoard');
+  const routeGroupsBoard = document.getElementById('routeGroupsBoard');
+  const now = Date.now();
+  if (upcomingBoard) {
+    const upcoming = reservationsCache
+      .map((item) => ({ item, d: reservationDateObject(item) }))
+      .filter(({ d, item }) => d && d.getTime() >= now && d.getTime() <= now + 24 * 3600 * 1000 && !['completed','cancelled'].includes(normalizeStatus(item.status)))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 12);
+    upcomingBoard.innerHTML = upcoming.length ? upcoming.map(({ item, d }) => `
+      <div class="timeline-item upcoming">
+        <strong>${escapeHtml(formatDateTime(d))}</strong>
+        <span>${escapeHtml(reservationName(item) || 'Sans nom')} • ${escapeHtml(reservationPickup(item) || '—')} → ${escapeHtml(reservationDropoff(item) || '—')}</span>
+      </div>`).join('') : '<p class="small-muted">Aucune course dans les prochaines 24h.</p>';
+  }
+  if (delayedBoard) {
+    const delayed = reservationsCache
+      .map((item) => ({ item, d: reservationDateObject(item) }))
+      .filter(({ d, item }) => d && d.getTime() < now && !['completed','cancelled'].includes(normalizeStatus(item.status)))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 12);
+    delayedBoard.innerHTML = delayed.length ? delayed.map(({ item, d }) => `
+      <div class="timeline-item alert">
+        <strong>${escapeHtml(formatDateTime(d))}</strong>
+        <span>${escapeHtml(reservationName(item) || 'Sans nom')} • ${escapeHtml(item.driverName || 'Sans chauffeur')}</span>
+      </div>`).join('') : '<p class="small-muted">Aucune course en retard.</p>';
+  }
+  if (routeGroupsBoard) {
+    const groups = {};
+    reservationsCache.forEach((item) => {
+      const key = item.groupId || '';
+      if (!key) return;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    });
+    const entries = Object.entries(groups).sort((a,b)=>b[1].length-a[1].length);
+    routeGroupsBoard.innerHTML = entries.length ? entries.map(([groupId, rows]) => `
+      <div class="route-group-card">
+        <h4>Groupe ${escapeHtml(groupId)}</h4>
+        <div class="route-group-list">${rows.sort((a,b)=>compareReservations(a,b,'datetime_asc')).map((item)=>`<div>${escapeHtml(formatDateTime(reservationDateTime(item)))} • ${escapeHtml(reservationDirection(item))} • ${escapeHtml(reservationPickup(item) || '—')} → ${escapeHtml(reservationDropoff(item) || '—')}</div>`).join('')}</div>
+      </div>`).join('') : '<p class="small-muted">Aucun aller-retour lié pour le moment.</p>';
+  }
+}
+
+function renderClientsBoard() {
+  const directory = document.getElementById('clientDirectory');
+  const recent = document.getElementById('clientRecentActivity');
+  const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = String(value); };
+  const map = new Map();
+  reservationsCache.forEach((item) => {
+    const name = reservationName(item) || 'Client sans nom';
+    const phone = reservationPhone(item) || '';
+    const email = item.email || '';
+    const key = `${name.toLowerCase()}|${phone}|${email.toLowerCase()}`;
+    const dt = reservationDateObject(item);
+    if (!map.has(key)) map.set(key, { name, phone, email, total: 0, urgent: 0, upcoming: null, lastDate: null, lastItem: null });
+    const row = map.get(key);
+    row.total += 1;
+    if (reservationIsUrgent(item)) row.urgent += 1;
+    if (dt && (!row.lastDate || dt > row.lastDate)) { row.lastDate = dt; row.lastItem = item; }
+    if (dt && dt.getTime() >= Date.now() && (!row.upcoming || dt < row.upcoming)) row.upcoming = dt;
+  });
+  const clients = Array.from(map.values()).sort((a,b)=> (b.lastDate?.getTime()||0) - (a.lastDate?.getTime()||0));
+  setText('clientStatTotal', clients.length);
+  setText('clientStatRecent', clients.filter(c => c.lastDate && c.lastDate.getTime() >= Date.now() - 30*24*3600*1000).length);
+  setText('clientStatVip', clients.filter(c => c.total >= 3).length);
+  setText('clientStatMissingPhone', clients.filter(c => !c.phone).length);
+  if (directory) {
+    directory.innerHTML = clients.length ? clients.slice(0,50).map((client) => `
+      <article class="client-card">
+        <div class="client-card-top">
+          <div><h4>${escapeHtml(client.name)}</h4><div class="small-muted">${escapeHtml(client.email || 'Sans email')}</div></div>
+          <span class="badge ${client.total >= 3 ? 'urgent' : 'assigned'}">${client.total} course${client.total>1?'s':''}</span>
+        </div>
+        <div class="client-meta">
+          <div><strong>Téléphone :</strong> ${escapeHtml(client.phone || '—')}</div>
+          <div><strong>Dernière activité :</strong> ${escapeHtml(client.lastDate ? formatDateTime(client.lastDate) : '—')}</div>
+          <div><strong>Prochain trajet :</strong> ${escapeHtml(client.upcoming ? formatDateTime(client.upcoming) : 'Aucun')}</div>
+          <div><strong>Urgences :</strong> ${escapeHtml(client.urgent)}</div>
+        </div>
+        <div class="client-actions">${client.phone ? `<a class="secondary-btn small-btn" href="tel:${escapeHtml(client.phone)}">Appeler</a>` : ''}${client.email ? `<a class="secondary-btn small-btn" href="mailto:${escapeHtml(client.email)}">Email</a>` : ''}</div>
+      </article>`).join('') : '<p class="small-muted">Aucun client enregistré.</p>';
+  }
+  if (recent) {
+    recent.innerHTML = clients.length ? clients.slice(0,12).map((client) => `
+      <div class="timeline-item">
+        <strong>${escapeHtml(client.name)}</strong>
+        <span>${escapeHtml(client.lastDate ? formatDateTime(client.lastDate) : '—')} • ${escapeHtml(client.lastItem ? `${reservationPickup(client.lastItem) || '—'} → ${reservationDropoff(client.lastItem) || '—'}` : 'Aucun trajet')}</span>
+      </div>`).join('') : '<p class="small-muted">Aucune activité récente.</p>';
+  }
 }
 
 function renderReservations() {

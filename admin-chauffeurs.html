@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Gestion des chauffeurs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
+<link rel="manifest" href="manifest-admin.json">
+<meta name="theme-color" content="#FFCA28">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taxi Live Admin">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-touch-fullscreen" content="yes">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<header class="hero admin-hero">
+  <div class="logo">
+    <img src="logo-taxi-live.png" alt="Logo Taxi Live Sorel-Tracy">
+    <h1>Taxi Live Admin Pro</h1>
+  </div>
+  <nav class="menu">
+    <a href="index.html">Réservation</a>
+    <a href="acces-admin-taxi-live.html" class="active">Accès Admin</a>
+    <a href="chauffeurs.html">Espace chauffeur</a>
+  </nav>
+  <p>Système admin privé avec modules séparés pour le dispatch, le planning, les clients et les chauffeurs.</p>
+</header>
+<div class="dashboard-wrapper">
+  <section class="dashboard-card" id="loginCard">
+    <h2>Connexion admin Firebase</h2>
+    <p class="small-muted">Connecte-toi avec un compte <strong>Email / Mot de passe</strong> créé dans Firebase Authentication puis ajouté dans la collection <strong>admins</strong>.</p>
+    <div class="input-group"><i class="fa fa-envelope"></i><input type="email" id="adminUser" placeholder="Email admin"></div>
+    <div class="input-group"><i class="fa fa-lock"></i><input type="password" id="adminPass" placeholder="Mot de passe"></div>
+    <button id="loginBtn">Se connecter</button>
+    <p id="loginError" class="error-message hidden"></p>
+  </section>
+  <section class="dashboard-card hidden" id="dashboardCard">
+    <div class="dashboard-topbar admin-shell-topbar">
+      <div>
+        <h2 id="pageTitle">Gestion des chauffeurs</h2>
+        <p class="small-muted">Système admin pro séparé par modules</p>
+        <p class="small-muted" id="adminBadge"></p>
+        <p class="small-muted" id="syncStatus">Connexion en cours…</p>
+      </div>
+      <div class="admin-topbar-actions">
+        <button id="enableAdminNotificationsBtn" class="secondary-btn">Activer les notifications admin</button>
+        <button id="logoutBtn" class="secondary-btn">Déconnexion</button>
+      </div>
+    </div>
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <a href="acces-admin-taxi-live.html" class="admin-nav-link"><i class="fa fa-chart-line"></i><span>Dashboard</span></a>
+        <a href="admin-reservations.html" class="admin-nav-link"><i class="fa fa-taxi"></i><span>Réservations</span></a>
+        <a href="admin-planning.html" class="admin-nav-link"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
+        <a href="admin-clients.html" class="admin-nav-link"><i class="fa fa-address-book"></i><span>Clients</span></a>
+        <a href="admin-chauffeurs.html" class="admin-nav-link active"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
+        <a href="admin-outils.html" class="admin-nav-link"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
+        <div class="admin-side-note">
+          <strong>Conseil dispatch</strong>
+          <p>Commence par le Dashboard, gère les urgences dans Réservations, suis le Planning, puis équilibre la charge dans Chauffeurs.</p>
+        </div>
+      </aside>
+      <main class="admin-main">
+        
+<section class="admin-page-grid">
+  <div class="admin-page-intro card-like"><h3>Gestion des chauffeurs</h3><p class="small-muted">Ajoute les chauffeurs, suis leur charge et active ou désactive l’accès rapidement.</p></div>
+  <div class="ops-hub-grid two-col-grid">
+    <section class="ops-card">
+      <div class="ops-card-header"><div><h3>Ajouter un chauffeur</h3><p class="small-muted">UID Firebase requis pour lier le compte de connexion.</p></div></div>
+      <form id="driverForm" class="driver-form-grid">
+        <input id="driverName" placeholder="Nom complet">
+        <input id="driverEmail" type="email" placeholder="Email chauffeur">
+        <input id="driverPhone" placeholder="Téléphone">
+        <input id="driverUid" placeholder="UID Firebase Auth">
+        <input id="driverCar" placeholder="Voiture / plaque">
+        <button type="submit">Ajouter le chauffeur</button>
+      </form>
+      <p id="driverMsg" class="hidden"></p>
+    </section>
+    <section class="ops-card">
+      <div class="ops-card-header"><div><h3>Charge en direct</h3><p class="small-muted">Courses actives et terminées par chauffeur.</p></div></div>
+      <div id="driverLoadBoard" class="driver-load-board"><p class="small-muted">Aucun chauffeur ajouté.</p></div>
+    </section>
+  </div>
+  <section class="ops-card">
+    <div class="ops-card-header"><div><h3>Liste des chauffeurs</h3><p class="small-muted">Vue complète avec téléphone, voiture et statut.</p></div></div>
+    <div id="driversList"></div>
+  </section>
+  <div class="hidden-hook" aria-hidden="true"><select id="dateFilter"><option value="all">Toutes</option></select><select id="driverFilter"><option value="all">Tous chauffeurs</option><option value="none">Sans chauffeur</option></select><select id="tripFilter"><option value="all">Tous</option></select><select id="statusFilter"><option value="all">Tous</option></select><select id="sortFilter"><option value="datetime_asc">Date</option></select><input id="searchReservation" value=""><div class="quick-filter active" data-quick="all"></div><div id="reservationsList"></div><p id="emptyState"></p><span id="statTotal"></span><span id="statRoundTrip"></span><span id="statToday"></span><span id="statPending"></span><span id="statAssigned"></span><span id="statInProgress"></span><span id="statCompleted"></span><span id="statUrgent"></span><span id="statNoDriver"></span><span id="statDrivers"></span><span id="reservationsSummary"></span><span id="nextCourseSummary"></span><span id="statNextHour"></span><span id="statTomorrow"></span><span id="statCancelled"></span><div id="todayTimeline"></div></div>
+</section>
+
+      </main>
+    </div>
+  </section>
+</div>
+<button id="installBtn" class="install-btn" style="display:none;">📲 Ajouter à l'écran d'accueil</button>
+<div id="iosBanner" style="display:none; position:fixed; bottom:10px; left:10px; right:10px; background:#FFCA28; color:#333; padding:12px; border-radius:12px; text-align:center; z-index:9999; font-weight:700; box-shadow:0 6px 20px rgba(0,0,0,0.15);">
+  Sur iPhone : appuie sur <strong>Partager</strong> puis <strong>Ajouter à l'écran d'accueil</strong>.
+  <button id="closeIosBanner" style="margin-left:8px; background:#333; color:#fff; border:none; border-radius:8px; padding:6px 10px;">Fermer</button>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

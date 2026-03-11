@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard Admin Pro</title>
+<title>Planning Dispatch</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
 <link rel="manifest" href="manifest-admin.json">
@@ -42,7 +42,7 @@
   <section class="dashboard-card hidden" id="dashboardCard">
     <div class="dashboard-topbar admin-shell-topbar">
       <div>
-        <h2 id="pageTitle">Dashboard Admin Pro</h2>
+        <h2 id="pageTitle">Planning Dispatch</h2>
         <p class="small-muted">Système admin pro séparé par modules</p>
         <p class="small-muted" id="adminBadge"></p>
         <p class="small-muted" id="syncStatus">Connexion en cours…</p>
@@ -54,9 +54,9 @@
     </div>
     <div class="admin-shell">
       <aside class="admin-sidebar">
-        <a href="acces-admin-taxi-live.html" class="admin-nav-link active"><i class="fa fa-chart-line"></i><span>Dashboard</span></a>
+        <a href="acces-admin-taxi-live.html" class="admin-nav-link"><i class="fa fa-chart-line"></i><span>Dashboard</span></a>
         <a href="admin-reservations.html" class="admin-nav-link"><i class="fa fa-taxi"></i><span>Réservations</span></a>
-        <a href="admin-planning.html" class="admin-nav-link"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
+        <a href="admin-planning.html" class="admin-nav-link active"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
         <a href="admin-clients.html" class="admin-nav-link"><i class="fa fa-address-book"></i><span>Clients</span></a>
         <a href="admin-chauffeurs.html" class="admin-nav-link"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
         <a href="admin-outils.html" class="admin-nav-link"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
@@ -68,57 +68,18 @@
       <main class="admin-main">
         
 <section class="admin-page-grid">
-  <div class="admin-page-intro card-like">
-    <h3>Centre de contrôle</h3>
-    <p class="small-muted">Vue générale, alertes du jour, charge des chauffeurs et raccourcis vers tous les modules admin.</p>
+  <div class="admin-page-intro card-like"><h3>Planning & supervision</h3><p class="small-muted">Anticipe les courses de la journée, surveille les retards et les départs proches.</p></div>
+  <div class="stats-grid compact-stats-grid">
+    <div class="mini-stat"><span>Prochaine heure</span><strong id="statNextHour">0</strong></div>
+    <div class="mini-stat"><span>Demain</span><strong id="statTomorrow">0</strong></div>
+    <div class="mini-stat"><span>Annulées</span><strong id="statCancelled">0</strong></div>
+    <div class="mini-stat"><span>Aujourd'hui</span><strong id="statToday">0</strong></div>
   </div>
-  <div class="stats-grid pro-stats-grid">
-    <div class="stat-box accent-total"><span>Total</span><strong id="statTotal">0</strong><small>Toutes les courses</small></div>
-    <div class="stat-box accent-round"><span>Aller-retour</span><strong id="statRoundTrip">0</strong><small>Groupes liés</small></div>
-    <div class="stat-box accent-today"><span>Aujourd'hui</span><strong id="statToday">0</strong><small>Courses du jour</small></div>
-    <div class="stat-box accent-pending"><span>En attente</span><strong id="statPending">0</strong><small>À dispatcher</small></div>
-    <div class="stat-box accent-assigned"><span>Assignées</span><strong id="statAssigned">0</strong><small>Chauffeur choisi</small></div>
-    <div class="stat-box accent-progress"><span>En cours</span><strong id="statInProgress">0</strong><small>Sur la route</small></div>
-    <div class="stat-box accent-done"><span>Terminées</span><strong id="statCompleted">0</strong><small>Historique utile</small></div>
-    <div class="stat-box accent-alert"><span>Urgentes</span><strong id="statUrgent">0</strong><small>Suivi prioritaire</small></div>
-    <div class="stat-box accent-drivers"><span>Sans chauffeur</span><strong id="statNoDriver">0</strong><small>À assigner</small></div>
-    <div class="stat-box accent-drivers"><span>Chauffeurs actifs</span><strong id="statDrivers">0</strong><small>Disponibles</small></div>
-  </div>
-  <div class="dispatch-toolbar">
-    <div class="dispatch-summary-card wide">
-      <strong id="reservationsSummary">0 réservation affichée</strong>
-      <span id="nextCourseSummary">Aucune course planifiée.</span>
-    </div>
-    <div class="ops-actions-grid compact-grid-actions">
-      <a href="admin-reservations.html" class="secondary-btn"><i class="fa fa-taxi"></i> Ouvrir le dispatch</a>
-      <a href="admin-planning.html" class="secondary-btn"><i class="fa fa-calendar-days"></i> Voir le planning</a>
-      <a href="admin-clients.html" class="secondary-btn"><i class="fa fa-address-book"></i> Clients</a>
-      <button id="showUnassignedBtn" class="secondary-btn"><i class="fa fa-user-slash"></i> Sans chauffeur</button>
-    </div>
-  </div>
-  <div class="ops-hub-grid">
-    <section class="ops-card">
-      <div class="ops-card-header"><div><h3>Centre d'opérations</h3><p class="small-muted">Actions rapides de gestion.</p></div><span class="badge driver">Admin</span></div>
-      <div class="ops-kpi-row">
-        <div class="mini-kpi"><span>Prochaine heure</span><strong id="statNextHour">0</strong></div>
-        <div class="mini-kpi"><span>Demain</span><strong id="statTomorrow">0</strong></div>
-        <div class="mini-kpi"><span>Annulées</span><strong id="statCancelled">0</strong></div>
-      </div>
-      <div class="quick-links-grid">
-        <a href="admin-chauffeurs.html" class="module-link-card"><i class="fa fa-id-badge"></i><strong>Chauffeurs</strong><span>Charge, téléphone, statut</span></a>
-        <a href="admin-outils.html" class="module-link-card"><i class="fa fa-screwdriver-wrench"></i><strong>Outils</strong><span>Export, impression, actions</span></a>
-        <a href="admin-reservations.html" class="module-link-card"><i class="fa fa-list"></i><strong>Réservations</strong><span>Assignation et suivi</span></a>
-        <a href="admin-planning.html" class="module-link-card"><i class="fa fa-clock"></i><strong>Planning</strong><span>Prochaines courses</span></a>
-      </div>
-    </section>
-    <section class="ops-card">
-      <div class="ops-card-header"><div><h3>Planning du jour</h3><p class="small-muted">Les prochaines courses à surveiller.</p></div></div>
-      <div id="todayTimeline" class="timeline-list"><p class="small-muted">Aucune course aujourd'hui.</p></div>
-    </section>
-    <section class="ops-card">
-      <div class="ops-card-header"><div><h3>Charge chauffeurs</h3><p class="small-muted">Répartition des courses actives.</p></div></div>
-      <div id="driverLoadBoard" class="driver-load-board"><p class="small-muted">Aucun chauffeur ajouté.</p></div>
-    </section>
+  <div class="ops-hub-grid two-col-grid">
+    <section class="ops-card"><div class="ops-card-header"><div><h3>Planning du jour</h3><p class="small-muted">Courses de la journée triées par heure.</p></div></div><div id="todayTimeline" class="timeline-list"></div></section>
+    <section class="ops-card"><div class="ops-card-header"><div><h3>Prochaines 24h</h3><p class="small-muted">Vision rapide des courses imminentes.</p></div></div><div id="upcomingTripsBoard" class="timeline-list"></div></section>
+    <section class="ops-card"><div class="ops-card-header"><div><h3>Courses en retard</h3><p class="small-muted">À appeler ou replanifier rapidement.</p></div></div><div id="delayedTripsBoard" class="timeline-list"></div></section>
+    <section class="ops-card"><div class="ops-card-header"><div><h3>Groupes liés / allers-retours</h3><p class="small-muted">Regroupe les trajets associés.</p></div></div><div id="routeGroupsBoard" class="client-directory"></div></section>
   </div>
   
   <div class="hidden-hook" aria-hidden="true">
@@ -134,7 +95,7 @@
     <p id="emptyState"></p>
   </div>
 
-  <span class="hidden-hook" id="statPlaceholder"></span>
+  <div class="hidden-hook"><span id="statTotal"></span><span id="statRoundTrip"></span><span id="statPending"></span><span id="statAssigned"></span><span id="statInProgress"></span><span id="statCompleted"></span><span id="statUrgent"></span><span id="statNoDriver"></span><span id="statDrivers"></span><span id="reservationsSummary"></span><span id="nextCourseSummary"></span><div id="driversList"></div><div id="reservationsList"></div><p id="emptyState"></p><div class="quick-filter active" data-quick="all"></div></div>
 </section>
 
       </main>
