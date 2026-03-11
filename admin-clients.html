@@ -17,22 +17,22 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body class="admin-pro-app">
 <header class="hero admin-hero">
   <div class="logo">
     <img src="logo-taxi-live.png" alt="Logo Taxi Live Sorel-Tracy">
-    <h1>Taxi Live Admin Pro</h1>
+    <h1>Taxi Live Dispatch Center</h1>
   </div>
   <nav class="menu">
     <a href="index.html">Réservation</a>
     <a href="acces-admin-taxi-live.html" class="active">Accès Admin</a>
     <a href="chauffeurs.html">Espace chauffeur</a>
   </nav>
-  <p>Système admin privé avec modules séparés pour le dispatch, le planning, les clients et les chauffeurs.</p>
+  <p>Système admin pro séparé par modules, optimisé pour le dispatch, le planning, les clients et les chauffeurs.</p>
 </header>
 <div class="dashboard-wrapper">
   <section class="dashboard-card" id="loginCard">
-    <h2>Connexion admin Firebase</h2>
+    <h2>Connexion admin sécurisée</h2>
     <p class="small-muted">Connecte-toi avec un compte <strong>Email / Mot de passe</strong> créé dans Firebase Authentication puis ajouté dans la collection <strong>admins</strong>.</p>
     <div class="input-group"><i class="fa fa-envelope"></i><input type="email" id="adminUser" placeholder="Email admin"></div>
     <div class="input-group"><i class="fa fa-lock"></i><input type="password" id="adminPass" placeholder="Mot de passe"></div>
@@ -54,6 +54,21 @@
     </div>
     <div class="admin-shell">
       <aside class="admin-sidebar">
+
+        <div class="admin-brand-card">
+          <div class="admin-brand-top">
+            <img src="logo-taxi-live.png" alt="Taxi Live">
+            <div>
+              <strong>Taxi Live Admin</strong>
+              <span>Dispatch professionnel</span>
+            </div>
+          </div>
+          <div class="admin-brand-kpis">
+            <span><i class="fa fa-shield-halved"></i> Accès sécurisé</span>
+            <span><i class="fa fa-bolt"></i> Temps réel</span>
+          </div>
+        </div>
+
         <a href="acces-admin-taxi-live.html" class="admin-nav-link"><i class="fa fa-chart-line"></i><span>Dashboard</span></a>
         <a href="admin-reservations.html" class="admin-nav-link"><i class="fa fa-taxi"></i><span>Réservations</span></a>
         <a href="admin-planning.html" class="admin-nav-link"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
@@ -66,6 +81,17 @@
         </div>
       </aside>
       <main class="admin-main">
+        <section class="module-hero-card">
+          <div>
+            <div class="module-breadcrumb">Admin Pro <span>/</span> Clients</div>
+            <h3>Répertoire clients</h3>
+            <p>Historique, derniers trajets et accès rapide téléphone / email.</p>
+          </div>
+          <div class="module-hero-actions">
+            <a href="admin-reservations.html" class="ghost-action"><i class="fa fa-taxi"></i> Dispatch</a>
+            <a href="admin-planning.html" class="ghost-action"><i class="fa fa-calendar-days"></i> Planning</a>
+          </div>
+        </section>
         
 <section class="admin-page-grid">
   <div class="admin-page-intro card-like"><h3>Clients & fidélisation</h3><p class="small-muted">Répertoire client, fréquence des réservations, activité récente et clients à rappeler.</p></div>
