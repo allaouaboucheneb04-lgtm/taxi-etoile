@@ -1,4 +1,4 @@
-const CACHE_NAME = 'taxi-etoile-v3';
+const CACHE_NAME = 'taxi-live-sorel-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

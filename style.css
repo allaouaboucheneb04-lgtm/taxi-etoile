@@ -542,3 +542,17 @@ body {
     width: 100%;
   }
 }
+
+
+.map-wrap {
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  margin-top: 12px;
+}
+
+.map-wrap iframe {
+  display: block;
+  width: 100%;
+  min-height: 280px;
+}
