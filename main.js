@@ -12,6 +12,72 @@ function splitDateTimeParts(datetimeString){
 // --- END FIX ---
 
 
+// --- EmailJS config ---
+const EMAILJS_PUBLIC_KEY = (window.EMAILJS_PUBLIC_KEY || 'W-3rUaqJdvEjPE1J0');
+const EMAILJS_SERVICE_ID = (window.EMAILJS_SERVICE_ID || 'service_5phpu0d');
+const EMAILJS_TEMPLATE_ID = (window.EMAILJS_TEMPLATE_ID || 'template_06gymkw');
+let emailJsReady = false;
+
+function initEmailJs() {
+  try {
+    if (window.emailjs && !emailJsReady) {
+      window.emailjs.init(EMAILJS_PUBLIC_KEY);
+      emailJsReady = true;
+    }
+    return emailJsReady;
+  } catch (error) {
+    console.error('EmailJS init error:', error);
+    return false;
+  }
+}
+
+function formatDatetimeForEmail(value) {
+  if (!value) return { date: '', time: '' };
+  let s = String(value).trim();
+  if (s.includes('T')) {
+    const [d, t=''] = s.split('T');
+    return { date: d, time: t.slice(0,5) };
+  }
+  if (s.includes(' ')) {
+    const [d, t=''] = s.split(' ');
+    return { date: d, time: t.slice(0,5) };
+  }
+  return { date: s, time: '' };
+}
+
+function buildReservationEmailParams(baseReservation, extras = {}) {
+  const aller = formatDatetimeForEmail(baseReservation.datetime || '');
+  const retour = formatDatetimeForEmail(extras.retourHeure || '');
+  return {
+    name: baseReservation.clientName || '',
+    phone: baseReservation.phone || '',
+    email: baseReservation.email || '',
+    trip_type: extras.allerRetour ? 'aller-retour' : 'aller-simple',
+    pickup: baseReservation.pickup || '',
+    destination: baseReservation.dropoff || '',
+    date: aller.date,
+    time: aller.time,
+    return_pickup: extras.retourDepart || '',
+    return_destination: extras.retourArrivee || '',
+    return_date: retour.date,
+    return_time: retour.time,
+    passengers: String(baseReservation.passengers ?? ''),
+    luggage: String(baseReservation.luggage ?? ''),
+    message: [baseReservation.notes || '', extras.retourDetails || ''].filter(Boolean).join(' | '),
+    flight_number: baseReservation.flightNumber || '',
+    return_flight_number: extras.retourNumeroVol || ''
+  };
+}
+
+async function sendReservationEmail(baseReservation, extras = {}) {
+  if (!initEmailJs()) {
+    throw new Error('EmailJS non initialisé');
+  }
+  const params = buildReservationEmailParams(baseReservation, extras);
+  return await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
+}
+// --- End EmailJS config ---
+
 // --- ROUND TRIP AUTO SPLIT ---
 function expandRoundTrips(list){
   const out=[];
@@ -573,10 +639,27 @@ function initReservationPage() {
           direction: 'aller-simple'
         });
       }
+
+      let emailNotice = '';
+      try {
+        await sendReservationEmail(baseReservation, {
+          allerRetour,
+          retourDepart,
+          retourArrivee,
+          retourHeure,
+          retourNumeroVol,
+          retourDetails
+        });
+        emailNotice = ' Email de confirmation admin envoyé.';
+      } catch (emailError) {
+        console.error('EmailJS send error:', emailError);
+        emailNotice = ` Réservation enregistrée, mais email non envoyé: ${emailError?.text || emailError?.message || 'vérifie EmailJS'}.`;
+      }
+
       form.reset();
       toggleRetourFields();
       suggestVehicle();
-      showInlineMessage('confirmation', '✅ Réservation envoyée avec succès.', false);
+      showInlineMessage('confirmation', '✅ Réservation envoyée avec succès.' + emailNotice, false);
     } catch (error) {
       showInlineMessage('confirmation', 'Erreur d’enregistrement : ' + (error.message || 'opération impossible'), true);
     } finally {

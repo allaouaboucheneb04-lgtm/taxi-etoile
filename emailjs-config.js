@@ -1,5 +1,3 @@
-window.EMAILJS_CONFIG = {
-  publicKey: 'W-3rUaqJdvEjPE1J0',
-  serviceId: 'service_5phpu0d',
-  templateId: 'template_06gymkw'
-};
+window.EMAILJS_PUBLIC_KEY = 'W-3rUaqJdvEjPE1J0';
+window.EMAILJS_SERVICE_ID = 'service_5phpu0d';
+window.EMAILJS_TEMPLATE_ID = 'template_06gymkw';
