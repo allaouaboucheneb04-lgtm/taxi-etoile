@@ -26,9 +26,9 @@
   backdrop.className = 'menu-backdrop';
   document.body.appendChild(backdrop);
 
-  const themeSelector = header.querySelector('.theme-btn');
-  if(themeSelector){
-    header.insertBefore(toggle, themeSelector);
+  const ctaBar = header.querySelector('.hero-cta');
+  if(ctaBar){
+    header.insertBefore(toggle, ctaBar);
   } else {
     header.insertBefore(toggle, nav);
   }
