@@ -1808,7 +1808,7 @@ function initDashboardPage() {
     try {
       await verifyAdminAccess(user);
       setDashboardVisibility(true);
-      if (syncStatus) syncStatus.textContent = 'Synchronisé en temps réel';
+      if (syncStatus) syncStatus.textContent = 'Système à jour';
       subscribeDrivers();
       subscribeReservations();
     } catch (error) {
@@ -1893,7 +1893,7 @@ function initDriverPage() {
     try {
       await verifyDriverAccess(user);
       setDriverDashboardVisibility(true);
-      if (syncStatus) syncStatus.textContent = 'Synchronisé en temps réel';
+      if (syncStatus) syncStatus.textContent = 'Système à jour';
       subscribeDriverReservations(user.uid);
     } catch (error) {
       await auth.signOut();
