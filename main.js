@@ -14,6 +14,66 @@ let currentUser = null;
 let currentAdminDoc = null;
 let currentDriverDoc = null;
 
+
+const STATUS_UI_MAP = {
+  pending: 'pending',
+  quote_request: 'quote_request',
+  en_attente: 'pending',
+  assigned: 'assigned',
+  assignee: 'assigned',
+  accepted: 'accepted',
+  acceptee: 'accepted',
+  on_the_way: 'on_the_way',
+  en_route: 'on_the_way',
+  arrivee_client: 'on_the_way',
+  confirmee: 'accepted',
+  en_cours: 'on_the_way',
+  completed: 'completed',
+  terminee: 'completed',
+  cancelled: 'cancelled',
+  annulee: 'cancelled'
+};
+
+function normalizeStatus(status) {
+  return STATUS_UI_MAP[status] || status || 'pending';
+}
+
+function reservationName(item) {
+  return item.clientName || item.nom || '';
+}
+
+function reservationPhone(item) {
+  return item.phone || item.telephone || '';
+}
+
+function reservationPickup(item) {
+  return item.pickup || item.depart || '';
+}
+
+function reservationDropoff(item) {
+  return item.dropoff || item.arrivee || '';
+}
+
+function reservationDateTime(item) {
+  return item.datetime || item.heure || item.date || '';
+}
+
+function reservationVehicle(item) {
+  return item.vehicleType || item.vehicule || 'berline';
+}
+
+function reservationPassengers(item) {
+  return item.passengers ?? item.passagers ?? '—';
+}
+
+function reservationLuggage(item) {
+  return item.luggage ?? item.valises ?? '—';
+}
+
+function reservationFlightNumber(item) {
+  return item.flightNumber || item.numeroVol || '';
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -222,32 +282,46 @@ function initReservationPage() {
       submitBtn.textContent = 'Enregistrement...';
     }
 
+    const allerRetour = !!document.getElementById('allerRetour')?.checked;
+    const retourNotes = [];
+    const retourDepart = document.getElementById('retourDepart')?.value?.trim() || '';
+    const retourArrivee = document.getElementById('retourArrivee')?.value?.trim() || '';
+    const retourHeure = document.getElementById('retourHeure')?.value || '';
+    const retourNumeroVol = document.getElementById('retourNumeroVol')?.value?.trim() || '';
+    const retourDetails = document.getElementById('retourDetails')?.value?.trim() || '';
+    if (allerRetour) {
+      if (retourDepart) retourNotes.push(`Retour départ: ${retourDepart}`);
+      if (retourArrivee) retourNotes.push(`Retour arrivée: ${retourArrivee}`);
+      if (retourHeure) retourNotes.push(`Retour date/heure: ${retourHeure}`);
+      if (retourNumeroVol) retourNotes.push(`Vol retour: ${retourNumeroVol}`);
+      if (retourDetails) retourNotes.push(`Détails retour: ${retourDetails}`);
+    }
+
+    const notesValue = [
+      document.getElementById('notes')?.value?.trim() || '',
+      allerRetour ? 'Type: aller-retour' : 'Type: aller-simple',
+      ...retourNotes
+    ].filter(Boolean).join(' | ');
+
     const reservation = {
-      nom: document.getElementById('nom')?.value?.trim() || '',
-      telephone: document.getElementById('telephone')?.value?.trim() || '',
+      clientName: document.getElementById('nom')?.value?.trim() || '',
+      phone: document.getElementById('telephone')?.value?.trim() || '',
       email: document.getElementById('email')?.value?.trim() || '',
-      passagers: Number(document.getElementById('passagers')?.value || 1),
-      numeroVol: document.getElementById('numeroVol')?.value?.trim() || '',
-      depart: document.getElementById('depart')?.value?.trim() || '',
-      arrivee: document.getElementById('arrivee')?.value?.trim() || '',
-      heure: document.getElementById('heure')?.value || '',
-      vehicule: document.getElementById('vehicule')?.value || 'berline',
-      valises: Number(document.getElementById('valises')?.value || 0),
-      notes: document.getElementById('notes')?.value?.trim() || '',
-      allerRetour: !!document.getElementById('allerRetour')?.checked,
-      retourDepart: document.getElementById('retourDepart')?.value?.trim() || '',
-      retourArrivee: document.getElementById('retourArrivee')?.value?.trim() || '',
-      retourHeure: document.getElementById('retourHeure')?.value || '',
-      retourNumeroVol: document.getElementById('retourNumeroVol')?.value?.trim() || '',
-      retourDetails: document.getElementById('retourDetails')?.value?.trim() || '',
-      status: 'en_attente',
-      driverId: '',
-      driverName: '',
+      passengers: Number(document.getElementById('passagers')?.value || 1),
+      flightNumber: document.getElementById('numeroVol')?.value?.trim() || '',
+      pickup: document.getElementById('depart')?.value?.trim() || '',
+      dropoff: document.getElementById('arrivee')?.value?.trim() || '',
+      datetime: document.getElementById('heure')?.value || '',
+      vehicleType: document.getElementById('vehicule')?.value || 'berline',
+      luggage: Number(document.getElementById('valises')?.value || 0),
+      notes: notesValue,
+      roundTrip: allerRetour,
+      returnDate: retourHeure ? retourHeure.split('T')[0] : '',
+      returnTime: retourHeure ? (retourHeure.split('T')[1] || '') : '',
+      status: 'pending',
+      driverId: null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      createdAtClient: new Date().toISOString(),
-      source: 'site-web',
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedBy: 'client-site'
+      source: 'site-web'
     };
 
     try {
@@ -269,26 +343,25 @@ function initReservationPage() {
 
 function reservationSearchBlob(item) {
   return [
-    item.nom, item.telephone, item.email, item.numeroVol, item.depart, item.arrivee,
-    item.notes, item.retourNumeroVol, item.retourDepart, item.retourArrivee, item.status,
-    item.driverName
+    reservationName(item), reservationPhone(item), item.email, reservationFlightNumber(item),
+    reservationPickup(item), reservationDropoff(item), item.notes, item.status, item.driverName
   ].join(' ').toLowerCase();
 }
 
 function statusLabel(status) {
+  const normalized = normalizeStatus(status);
   const labels = {
-    en_attente: 'En attente',
-    assignee: 'Assignée',
-    acceptee: 'Acceptée',
-    en_route: 'En route',
-    arrivee_client: 'Arrivé au client',
-    confirmee: 'Confirmée',
-    en_cours: 'En cours',
-    terminee: 'Terminée',
-    annulee: 'Annulée'
+    pending: 'En attente',
+    quote_request: 'Demande de prix',
+    assigned: 'Assignée',
+    accepted: 'Acceptée',
+    on_the_way: 'En route',
+    completed: 'Terminée',
+    cancelled: 'Annulée'
   };
-  return labels[status] || status || 'En attente';
+  return labels[normalized] || normalized || 'En attente';
 }
+
 
 function driverOptionsHtml(selectedId = '') {
   const activeDrivers = driversCache.filter((driver) => driver.active !== false);
@@ -324,9 +397,16 @@ function renderDriversMiniList() {
       const active = button.getAttribute('data-driver-active') === '1';
       if (!id || !db) return;
       try {
-        await db.collection(DRIVERS_COLLECTION).doc(id).update({
+        const driverData = driversCache.find((item) => item.id === id) || {};
+        await db.collection(DRIVERS_COLLECTION).doc(id).set({
+          name: driverData.name || '',
+          email: driverData.email || '',
+          phone: driverData.phone || '',
           active: !active,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          createdAt: driverData.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+          carModel: driverData.carModel || driverData.car || '',
+          plate: driverData.plate || '',
+          photoUrl: driverData.photoUrl || ''
         });
       } catch (error) {
         alert('Impossible de modifier le chauffeur : ' + (error.message || 'erreur'));
@@ -346,7 +426,7 @@ function renderReservations() {
 
   const filtered = reservationsCache.filter((item) => {
     const matchesSearch = reservationSearchBlob(item).includes(searchValue);
-    const tripType = item.allerRetour ? 'aller-retour' : 'aller-simple';
+    const tripType = (item.roundTrip || item.allerRetour) ? 'aller-retour' : 'aller-simple';
     const matchesTrip = tripFilter === 'all' || tripFilter === tripType;
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesTrip && matchesStatus;
@@ -358,10 +438,10 @@ function renderReservations() {
   };
 
   setText('statTotal', reservationsCache.length);
-  setText('statRoundTrip', reservationsCache.filter((item) => item.allerRetour).length);
+  setText('statRoundTrip', reservationsCache.filter((item) => item.roundTrip || item.allerRetour).length);
   setText('statToday', reservationsCache.filter((item) => isToday(item.createdAt || item.createdAtClient)).length);
-  setText('statPending', reservationsCache.filter((item) => item.status === 'en_attente').length);
-  setText('statAssigned', reservationsCache.filter((item) => item.status === 'assignee').length);
+  setText('statPending', reservationsCache.filter((item) => normalizeStatus(item.status) === 'pending').length);
+  setText('statAssigned', reservationsCache.filter((item) => normalizeStatus(item.status) === 'assigned').length);
   setText('statDrivers', driversCache.filter((driver) => driver.active !== false).length);
 
   renderDriversMiniList();
@@ -377,20 +457,20 @@ function renderReservations() {
     <article class="reservation-card">
       <div class="reservation-header">
         <div>
-          <h3>${escapeHtml(item.nom || 'Sans nom')}</h3>
-          <p>${escapeHtml(item.allerRetour ? 'Aller-retour' : 'Aller simple')} • ${escapeHtml(item.vehicule || 'berline')} • ${escapeHtml(item.statusLabel)}</p>
+          <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
+          <p>${escapeHtml((item.roundTrip || item.allerRetour) ? 'Aller-retour' : 'Aller simple')} • ${escapeHtml(reservationVehicle(item))} • ${escapeHtml(item.statusLabel)}</p>
         </div>
         <button class="danger-btn small-btn" data-delete-id="${escapeHtml(item.id)}">Supprimer</button>
       </div>
       <div class="reservation-grid">
-        <div><strong>Téléphone :</strong> ${escapeHtml(item.telephone || '—')}</div>
+        <div><strong>Téléphone :</strong> ${escapeHtml(reservationPhone(item) || '—')}</div>
         <div><strong>Email :</strong> ${escapeHtml(item.email || '—')}</div>
-        <div><strong>Passagers :</strong> ${escapeHtml(item.passagers || '—')}</div>
-        <div><strong>Valises :</strong> ${escapeHtml(item.valises || '—')}</div>
-        <div><strong>Vol :</strong> ${escapeHtml(item.numeroVol || '—')}</div>
-        <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(item.heure))}</div>
-        <div><strong>Départ :</strong> ${escapeHtml(item.depart || '—')}</div>
-        <div><strong>Arrivée :</strong> ${escapeHtml(item.arrivee || '—')}</div>
+        <div><strong>Passagers :</strong> ${escapeHtml(reservationPassengers(item))}</div>
+        <div><strong>Valises :</strong> ${escapeHtml(reservationLuggage(item))}</div>
+        <div><strong>Vol :</strong> ${escapeHtml(reservationFlightNumber(item) || '—')}</div>
+        <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
+        <div><strong>Départ :</strong> ${escapeHtml(reservationPickup(item) || '—')}</div>
+        <div><strong>Arrivée :</strong> ${escapeHtml(reservationDropoff(item) || '—')}</div>
         <div><strong>Créée le :</strong> ${escapeHtml(formatDateTime(item.createdAt || item.createdAtClient))}</div>
         <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
         <div><strong>Chauffeur :</strong> ${escapeHtml(item.driverName || 'Non assigné')}</div>
@@ -401,19 +481,16 @@ function renderReservations() {
         <div>
           <strong>Statut :</strong>
           <select class="status-select" data-status-id="${escapeHtml(item.id)}">
-            <option value="en_attente" ${item.status === 'en_attente' ? 'selected' : ''}>En attente</option>
-            <option value="assignee" ${item.status === 'assignee' ? 'selected' : ''}>Assignée</option>
-            <option value="acceptee" ${item.status === 'acceptee' ? 'selected' : ''}>Acceptée</option>
-            <option value="en_route" ${item.status === 'en_route' ? 'selected' : ''}>En route</option>
-            <option value="arrivee_client" ${item.status === 'arrivee_client' ? 'selected' : ''}>Arrivé au client</option>
-            <option value="confirmee" ${item.status === 'confirmee' ? 'selected' : ''}>Confirmée</option>
-            <option value="en_cours" ${item.status === 'en_cours' ? 'selected' : ''}>En cours</option>
-            <option value="terminee" ${item.status === 'terminee' ? 'selected' : ''}>Terminée</option>
-            <option value="annulee" ${item.status === 'annulee' ? 'selected' : ''}>Annulée</option>
+            <option value="pending" ${normalizeStatus(item.status) === 'pending' ? 'selected' : ''}>En attente</option>
+            <option value="assigned" ${normalizeStatus(item.status) === 'assigned' ? 'selected' : ''}>Assignée</option>
+            <option value="accepted" ${normalizeStatus(item.status) === 'accepted' ? 'selected' : ''}>Acceptée</option>
+            <option value="on_the_way" ${normalizeStatus(item.status) === 'on_the_way' ? 'selected' : ''}>En route</option>
+            <option value="completed" ${normalizeStatus(item.status) === 'completed' ? 'selected' : ''}>Terminée</option>
+            <option value="cancelled" ${normalizeStatus(item.status) === 'cancelled' ? 'selected' : ''}>Annulée</option>
           </select>
         </div>
       </div>
-      ${item.allerRetour ? `
+      ${(item.roundTrip || item.allerRetour) ? `
         <div class="retour-summary">
           <h4>Retour</h4>
           <p><strong>Départ :</strong> ${escapeHtml(item.retourDepart || '—')}</p>
@@ -445,9 +522,7 @@ function renderReservations() {
       if (!id || !db) return;
       try {
         await db.collection(RESERVATIONS_COLLECTION).doc(id).update({
-          status: select.value,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedBy: currentUser?.email || ''
+          status: select.value
         });
       } catch (error) {
         alert('Mise à jour impossible : ' + (error.message || 'erreur'));
@@ -463,11 +538,9 @@ function renderReservations() {
       const driver = driversCache.find((item) => item.id === driverId);
       try {
         await db.collection(RESERVATIONS_COLLECTION).doc(id).update({
-          driverId: driverId || '',
+          driverId: driverId || null,
           driverName: driver?.name || '',
-          status: driverId ? 'assignee' : 'en_attente',
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedBy: currentUser?.email || ''
+          status: driverId ? 'assigned' : 'pending'
         });
       } catch (error) {
         alert('Assignation impossible : ' + (error.message || 'erreur'));
@@ -487,9 +560,9 @@ function renderDriverReservations() {
   };
 
   setText('driverStatTotal', driverReservationsCache.length);
-  setText('driverStatAssigned', driverReservationsCache.filter((item) => item.status === 'assignee').length);
-  setText('driverStatInProgress', driverReservationsCache.filter((item) => ['acceptee', 'en_route', 'arrivee_client', 'en_cours'].includes(item.status)).length);
-  setText('driverStatDone', driverReservationsCache.filter((item) => item.status === 'terminee').length);
+  setText('driverStatAssigned', driverReservationsCache.filter((item) => normalizeStatus(item.status) === 'assigned').length);
+  setText('driverStatInProgress', driverReservationsCache.filter((item) => ['accepted', 'on_the_way'].includes(normalizeStatus(item.status))).length);
+  setText('driverStatDone', driverReservationsCache.filter((item) => normalizeStatus(item.status) === 'completed').length);
 
   if (!driverReservationsCache.length) {
     list.innerHTML = '';
@@ -502,25 +575,23 @@ function renderDriverReservations() {
     <article class="reservation-card">
       <div class="reservation-header">
         <div>
-          <h3>${escapeHtml(item.nom || 'Sans nom')}</h3>
+          <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
           <p>${escapeHtml(statusLabel(item.status))}</p>
         </div>
       </div>
       <div class="reservation-grid">
-        <div><strong>Téléphone :</strong> ${escapeHtml(item.telephone || '—')}</div>
-        <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(item.heure))}</div>
-        <div><strong>Départ :</strong> ${escapeHtml(item.depart || '—')}</div>
-        <div><strong>Arrivée :</strong> ${escapeHtml(item.arrivee || '—')}</div>
+        <div><strong>Téléphone :</strong> ${escapeHtml(reservationPhone(item) || '—')}</div>
+        <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
+        <div><strong>Départ :</strong> ${escapeHtml(reservationPickup(item) || '—')}</div>
+        <div><strong>Arrivée :</strong> ${escapeHtml(reservationDropoff(item) || '—')}</div>
         <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
         <div>
           <strong>Statut :</strong>
           <select class="driver-status-select" data-status-id="${escapeHtml(item.id)}">
-            <option value="assignee" ${item.status === 'assignee' ? 'selected' : ''}>Assignée</option>
-            <option value="acceptee" ${item.status === 'acceptee' ? 'selected' : ''}>Acceptée</option>
-            <option value="en_route" ${item.status === 'en_route' ? 'selected' : ''}>En route</option>
-            <option value="arrivee_client" ${item.status === 'arrivee_client' ? 'selected' : ''}>Arrivé au client</option>
-            <option value="en_cours" ${item.status === 'en_cours' ? 'selected' : ''}>En cours</option>
-            <option value="terminee" ${item.status === 'terminee' ? 'selected' : ''}>Terminée</option>
+            <option value="accepted" ${normalizeStatus(item.status) === 'accepted' ? 'selected' : ''}>Acceptée</option>
+            <option value="on_the_way" ${normalizeStatus(item.status) === 'on_the_way' ? 'selected' : ''}>En route</option>
+            <option value="completed" ${normalizeStatus(item.status) === 'completed' ? 'selected' : ''}>Terminée</option>
+            <option value="cancelled" ${normalizeStatus(item.status) === 'cancelled' ? 'selected' : ''}>Annulée</option>
           </select>
         </div>
       </div>
@@ -533,9 +604,7 @@ function renderDriverReservations() {
       if (!id || !db) return;
       try {
         await db.collection(RESERVATIONS_COLLECTION).doc(id).update({
-          status: select.value,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedBy: currentUser?.email || ''
+          status: select.value
         });
       } catch (error) {
         alert('Mise à jour impossible : ' + (error.message || 'erreur'));
@@ -549,8 +618,8 @@ function mapReservationDoc(doc) {
   return {
     id: doc.id,
     ...data,
-    status: data.status || 'en_attente',
-    statusLabel: statusLabel(data.status || 'en_attente')
+    status: normalizeStatus(data.status || 'pending'),
+    statusLabel: statusLabel(data.status || 'pending')
   };
 }
 
@@ -561,7 +630,7 @@ function mapDriverDoc(doc) {
     ...data,
     name: data.name || '',
     phone: data.phone || '',
-    car: data.car || '',
+    car: data.carModel || data.car || '',
     active: data.active !== false
   };
 }
@@ -591,7 +660,7 @@ async function verifyDriverAccess(user) {
   }
   currentDriverDoc = { id: doc.id, ...data };
   const badge = document.getElementById('driverBadge');
-  if (badge) badge.textContent = `${data.name || user.email} • ${data.phone || ''} • ${data.car || ''}`;
+  if (badge) badge.textContent = `${data.name || user.email} • ${data.phone || ''} • ${data.carModel || data.car || ''}`;
 }
 
 function subscribeDrivers() {
@@ -681,25 +750,26 @@ function initDashboardPage() {
     e.preventDefault();
     hideInlineMessage('driverMsg');
     const name = document.getElementById('driverName')?.value?.trim();
+    const email = document.getElementById('driverEmail')?.value?.trim();
     const phone = document.getElementById('driverPhone')?.value?.trim();
     const uid = document.getElementById('driverUid')?.value?.trim();
     const car = document.getElementById('driverCar')?.value?.trim();
-    if (!name || !phone || !car || !uid) {
-      showInlineMessage('driverMsg', 'Le UID Firebase du chauffeur est obligatoire pour que sa connexion fonctionne.', true);
+    if (!name || !email || !phone || !car || !uid) {
+      showInlineMessage('driverMsg', 'Nom, email, téléphone, UID Firebase et voiture/plaque sont obligatoires.', true);
       return;
     }
     try {
       const driverPayload = {
         name,
+        email,
         phone,
-        car,
-        plate: '',
         active: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdBy: currentUser?.email || ''
+        carModel: car,
+        plate: '',
+        photoUrl: ''
       };
-      await db.collection(DRIVERS_COLLECTION).doc(uid).set(driverPayload, { merge: true });
+      await db.collection(DRIVERS_COLLECTION).doc(uid).set(driverPayload);
       document.getElementById('driverForm').reset();
       showInlineMessage('driverMsg', 'Chauffeur ajouté.', false);
     } catch (error) {
