@@ -908,3 +908,112 @@ body.admin-pro-app{
   .module-hero-card{padding:1rem}
   .module-hero-card h3{font-size:1.12rem}
 }
+
+
+/* ===== MENU HAMBURGER CLIENT ===== */
+.menu-toggle{
+  display:none;
+  align-items:center;
+  justify-content:center;
+  gap:.55rem;
+  margin:10px auto 0;
+  padding:12px 16px;
+  border:none;
+  border-radius:14px;
+  background:#111;
+  color:#fff;
+  font-weight:800;
+  font-size:15px;
+  box-shadow:0 10px 24px rgba(0,0,0,.22);
+  cursor:pointer;
+}
+.menu-toggle i{font-size:18px}
+.menu-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .22s ease;
+  z-index:1198;
+}
+body.menu-open .menu-backdrop{
+  opacity:1;
+  pointer-events:auto;
+}
+@media (max-width: 860px){
+  header.hero{
+    position:relative;
+  }
+  .menu-toggle{
+    display:inline-flex;
+  }
+  header.hero nav.menu{
+    display:none;
+  }
+  header.hero nav.menu.mobile-ready{
+    position:fixed;
+    top:0;
+    right:0;
+    width:min(88vw, 360px);
+    height:100vh;
+    margin:0;
+    padding:86px 18px 26px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:10px;
+    overflow:auto;
+    border-radius:28px 0 0 28px;
+    background:rgba(255,255,255,.98);
+    box-shadow:-20px 0 50px rgba(0,0,0,.22);
+    transform:translateX(105%);
+    transition:transform .24s ease;
+    z-index:1199;
+    backdrop-filter:blur(12px);
+  }
+  body.theme-dark header.hero nav.menu.mobile-ready,
+  body.dark header.hero nav.menu.mobile-ready,
+  body[data-theme="dark"] header.hero nav.menu.mobile-ready{
+    background:rgba(17,24,39,.98);
+  }
+  body.menu-open header.hero nav.menu.mobile-ready{
+    transform:translateX(0);
+  }
+  header.hero nav.menu.mobile-ready a{
+    width:100%;
+    text-align:left;
+    padding:14px 16px;
+    border-radius:14px;
+    font-size:16px;
+  }
+  .menu-close-label{
+    position:absolute;
+    top:18px;
+    right:18px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:46px;
+    height:46px;
+    border:none;
+    border-radius:50%;
+    background:#111;
+    color:#fff;
+    box-shadow:0 10px 24px rgba(0,0,0,.22);
+    cursor:pointer;
+  }
+  body.theme-dark .menu-close-label,
+  body.dark .menu-close-label,
+  body[data-theme="dark"] .menu-close-label{
+    background:#fff;
+    color:#111;
+  }
+  body.menu-open{
+    overflow:hidden;
+  }
+  header.hero .theme-btn{
+    max-width:280px;
+  }
+}

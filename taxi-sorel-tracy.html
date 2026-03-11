@@ -54,5 +54,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredP
 installBtn.addEventListener('click',async()=>{installBtn.style.display='none'; if(deferredPrompt){deferredPrompt.prompt(); deferredPrompt=null;}});
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'});}
 </script>
+<script src="hamburger-menu.js"></script>
 </body>
 </html>
