@@ -74,6 +74,17 @@ function reservationFlightNumber(item) {
   return item.flightNumber || item.numeroVol || '';
 }
 
+function reservationRoundTrip(item) {
+  return !!(item.roundTrip || item.allerRetour || item.retourDepart || item.retourArrivee || item.retourHeure || item.returnDate || item.returnTime);
+}
+
+function reservationReturnDateTime(item) {
+  if (item.retourHeure) return item.retourHeure;
+  if (item.returnDate && item.returnTime) return `${item.returnDate}T${item.returnTime}`;
+  if (item.returnDate) return item.returnDate;
+  return '';
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -316,6 +327,11 @@ function initReservationPage() {
       luggage: Number(document.getElementById('valises')?.value || 0),
       notes: notesValue,
       roundTrip: allerRetour,
+      retourDepart,
+      retourArrivee,
+      retourHeure,
+      retourNumeroVol,
+      retourDetails,
       returnDate: retourHeure ? retourHeure.split('T')[0] : '',
       returnTime: retourHeure ? (retourHeure.split('T')[1] || '') : '',
       status: 'pending',
@@ -426,7 +442,7 @@ function renderReservations() {
 
   const filtered = reservationsCache.filter((item) => {
     const matchesSearch = reservationSearchBlob(item).includes(searchValue);
-    const tripType = (item.roundTrip || item.allerRetour) ? 'aller-retour' : 'aller-simple';
+    const tripType = reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple';
     const matchesTrip = tripFilter === 'all' || tripFilter === tripType;
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesTrip && matchesStatus;
@@ -458,7 +474,7 @@ function renderReservations() {
       <div class="reservation-header">
         <div>
           <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
-          <p>${escapeHtml((item.roundTrip || item.allerRetour) ? 'Aller-retour' : 'Aller simple')} • ${escapeHtml(reservationVehicle(item))} • ${escapeHtml(item.statusLabel)}</p>
+          <p>${escapeHtml(reservationRoundTrip(item) ? 'Aller-retour' : 'Aller simple')} • ${escapeHtml(reservationVehicle(item))} • ${escapeHtml(item.statusLabel)}</p>
         </div>
         <button class="danger-btn small-btn" data-delete-id="${escapeHtml(item.id)}">Supprimer</button>
       </div>
@@ -490,12 +506,12 @@ function renderReservations() {
           </select>
         </div>
       </div>
-      ${(item.roundTrip || item.allerRetour) ? `
+      ${reservationRoundTrip(item) ? `
         <div class="retour-summary">
           <h4>Retour</h4>
           <p><strong>Départ :</strong> ${escapeHtml(item.retourDepart || '—')}</p>
           <p><strong>Arrivée :</strong> ${escapeHtml(item.retourArrivee || '—')}</p>
-          <p><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(item.retourHeure))}</p>
+          <p><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationReturnDateTime(item)))}</p>
           <p><strong>Vol retour :</strong> ${escapeHtml(item.retourNumeroVol || '—')}</p>
           <p><strong>Détails :</strong> ${escapeHtml(item.retourDetails || '—')}</p>
         </div>
