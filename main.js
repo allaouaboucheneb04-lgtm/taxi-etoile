@@ -116,6 +116,11 @@ function reservationReturnDateTime(item) {
   return '';
 }
 
+function reservationDirection(item) {
+  if (item.direction === 'aller' || item.direction === 'retour') return item.direction;
+  return reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple';
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -463,13 +468,7 @@ function initReservationPage() {
       if (retourDetails) retourNotes.push(`Détails retour: ${retourDetails}`);
     }
 
-    const notesValue = [
-      document.getElementById('notes')?.value?.trim() || '',
-      allerRetour ? 'Type: aller-retour' : 'Type: aller-simple',
-      ...retourNotes
-    ].filter(Boolean).join(' | ');
-
-    const reservation = {
+    const baseReservation = {
       clientName: document.getElementById('nom')?.value?.trim() || '',
       phone: document.getElementById('telephone')?.value?.trim() || '',
       email: document.getElementById('email')?.value?.trim() || '',
@@ -480,23 +479,50 @@ function initReservationPage() {
       datetime: document.getElementById('heure')?.value || '',
       vehicleType: document.getElementById('vehicule')?.value || 'berline',
       luggage: Number(document.getElementById('valises')?.value || 0),
-      notes: notesValue,
-      roundTrip: allerRetour,
-      retourDepart,
-      retourArrivee,
-      retourHeure,
-      retourNumeroVol,
-      retourDetails,
-      returnDate: retourHeure ? retourHeure.split('T')[0] : '',
-      returnTime: retourHeure ? (retourHeure.split('T')[1] || '') : '',
+      notes: document.getElementById('notes')?.value?.trim() || '',
       status: 'pending',
       driverId: null,
+      driverName: '',
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       source: 'site-web'
     };
 
     try {
-      await db.collection(RESERVATIONS_COLLECTION).add(reservation);
+      if (allerRetour) {
+        const groupId = `rt_${Date.now()}`;
+        const reservations = db.collection(RESERVATIONS_COLLECTION);
+        const allerRef = reservations.doc();
+        const retourRef = reservations.doc();
+        const batch = db.batch();
+
+        batch.set(allerRef, {
+          ...baseReservation,
+          direction: 'aller',
+          groupId,
+          linkedTripId: retourRef.id,
+          tripRole: 'round_trip_part'
+        });
+
+        batch.set(retourRef, {
+          ...baseReservation,
+          flightNumber: retourNumeroVol,
+          pickup: retourDepart || baseReservation.dropoff,
+          dropoff: retourArrivee || baseReservation.pickup,
+          datetime: retourHeure || baseReservation.datetime,
+          notes: retourDetails || '',
+          direction: 'retour',
+          groupId,
+          linkedTripId: allerRef.id,
+          tripRole: 'round_trip_part'
+        });
+
+        await batch.commit();
+      } else {
+        await db.collection(RESERVATIONS_COLLECTION).add({
+          ...baseReservation,
+          direction: 'aller-simple'
+        });
+      }
       form.reset();
       toggleRetourFields();
       suggestVehicle();
@@ -597,7 +623,7 @@ function renderReservations() {
 
   const filtered = reservationsCache.filter((item) => {
     const matchesSearch = reservationSearchBlob(item).includes(searchValue);
-    const tripType = reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple';
+    const tripType = item.groupId ? 'aller-retour' : (reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple');
     const matchesTrip = tripFilter === 'all' || tripFilter === tripType;
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesTrip && matchesStatus;
@@ -609,7 +635,7 @@ function renderReservations() {
   };
 
   setText('statTotal', reservationsCache.length);
-  setText('statRoundTrip', reservationsCache.filter((item) => item.roundTrip || item.allerRetour).length);
+  setText('statRoundTrip', new Set(reservationsCache.filter((item) => item.groupId).map((item) => item.groupId)).size + reservationsCache.filter((item) => !item.groupId && (item.roundTrip || item.allerRetour)).length);
   setText('statToday', reservationsCache.filter((item) => isToday(item.createdAt || item.createdAtClient)).length);
   setText('statPending', reservationsCache.filter((item) => normalizeStatus(item.status) === 'pending').length);
   setText('statAssigned', reservationsCache.filter((item) => normalizeStatus(item.status) === 'assigned').length);
@@ -629,7 +655,7 @@ function renderReservations() {
       <div class="reservation-header">
         <div>
           <h3>${escapeHtml(reservationName(item) || 'Sans nom')}</h3>
-          <p>${escapeHtml(reservationRoundTrip(item) ? 'Aller-retour' : 'Aller simple')} • ${escapeHtml(reservationVehicle(item))} • ${escapeHtml(item.statusLabel)}</p>
+          <p>${escapeHtml(reservationDirection(item))} • ${escapeHtml(reservationVehicle(item))} • ${escapeHtml(item.statusLabel)}</p>
         </div>
         <button class="danger-btn small-btn" data-delete-id="${escapeHtml(item.id)}">Supprimer</button>
       </div>
@@ -640,6 +666,9 @@ function renderReservations() {
         <div><strong>Valises :</strong> ${escapeHtml(reservationLuggage(item))}</div>
         <div><strong>Vol :</strong> ${escapeHtml(reservationFlightNumber(item) || '—')}</div>
         <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
+        <div><strong>Direction :</strong> ${escapeHtml(reservationDirection(item))}</div>
+        <div><strong>Groupe :</strong> ${escapeHtml(item.groupId || '—')}</div>
+        <div><strong>Course liée :</strong> ${escapeHtml(item.linkedTripId || '—')}</div>
         <div><strong>Départ :</strong> ${escapeHtml(reservationPickup(item) || '—')}</div>
         <div><strong>Arrivée :</strong> ${escapeHtml(reservationDropoff(item) || '—')}</div>
         <div><strong>Créée le :</strong> ${escapeHtml(formatDateTime(item.createdAt || item.createdAtClient))}</div>
@@ -661,7 +690,7 @@ function renderReservations() {
           </select>
         </div>
       </div>
-      ${reservationRoundTrip(item) ? `
+      ${(!item.groupId && reservationRoundTrip(item)) ? `
         <div class="retour-summary">
           <h4>Retour</h4>
           <p><strong>Départ :</strong> ${escapeHtml(item.retourDepart || '—')}</p>
@@ -753,6 +782,9 @@ function renderDriverReservations() {
       <div class="reservation-grid">
         <div><strong>Téléphone :</strong> ${escapeHtml(reservationPhone(item) || '—')}</div>
         <div><strong>Date/heure :</strong> ${escapeHtml(formatDateTime(reservationDateTime(item)))}</div>
+        <div><strong>Direction :</strong> ${escapeHtml(reservationDirection(item))}</div>
+        <div><strong>Groupe :</strong> ${escapeHtml(item.groupId || '—')}</div>
+        <div><strong>Course liée :</strong> ${escapeHtml(item.linkedTripId || '—')}</div>
         <div><strong>Départ :</strong> ${escapeHtml(reservationPickup(item) || '—')}</div>
         <div><strong>Arrivée :</strong> ${escapeHtml(reservationDropoff(item) || '—')}</div>
         <div><strong>Notes :</strong> ${escapeHtml(item.notes || '—')}</div>
@@ -786,12 +818,14 @@ function renderDriverReservations() {
 
 function mapReservationDoc(doc) {
   const data = doc.data() || {};
-  return {
+  const mapped = {
     id: doc.id,
     ...data,
     status: normalizeStatus(data.status || 'pending'),
     statusLabel: statusLabel(data.status || 'pending')
   };
+  if (mapped.direction === 'aller-simple') mapped.direction = 'aller';
+  return mapped;
 }
 
 function mapDriverDoc(doc) {
