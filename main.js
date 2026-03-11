@@ -14,6 +14,17 @@ let currentUser = null;
 let currentAdminDoc = null;
 let currentDriverDoc = null;
 
+const NOTIFICATION_STORAGE_KEYS = {
+  adminEnabled: 'taxi_admin_notifications_enabled',
+  driverEnabled: 'taxi_driver_notifications_enabled'
+};
+
+let adminNotificationReady = false;
+let driverNotificationReady = false;
+let adminKnownReservationIds = new Set();
+let driverKnownReservationIds = new Set();
+let audioContext = null;
+
 
 const STATUS_UI_MAP = {
   pending: 'pending',
@@ -134,6 +145,125 @@ function hideInlineMessage(id) {
   el.classList.add('hidden');
 }
 
+function getStoredNotificationPreference(key) {
+  return localStorage.getItem(key) === "1";
+}
+
+function setStoredNotificationPreference(key, value) {
+  localStorage.setItem(key, value ? "1" : "0");
+}
+
+async function ensureAudioReady() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return false;
+    if (!audioContext) audioContext = new AudioContextClass();
+    if (audioContext.state === 'suspended') await audioContext.resume();
+    return audioContext.state === 'running';
+  } catch {
+    return false;
+  }
+}
+
+async function playNotificationBeep() {
+  try {
+    const ready = await ensureAudioReady();
+    if (!ready || !audioContext) return;
+    const now = audioContext.currentTime;
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, now);
+    oscillator.frequency.setValueAtTime(660, now + 0.12);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.34);
+  } catch {}
+}
+
+async function showBrowserNotification(title, body, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const options = {
+    body,
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    tag: tag || 'taxi-live-notification',
+    renotify: true
+  };
+
+  try {
+    const registration = await navigator.serviceWorker?.getRegistration();
+    if (registration?.showNotification) {
+      await registration.showNotification(title, options);
+      return;
+    }
+  } catch {}
+
+  try {
+    new Notification(title, options);
+  } catch {}
+}
+
+async function enableNotificationsForRole(role) {
+  if (!('Notification' in window)) {
+    alert('Les notifications ne sont pas supportées sur cet appareil.');
+    return false;
+  }
+
+  const permission = await Notification.requestPermission();
+  const granted = permission === 'granted';
+  if (!granted) {
+    alert('Autorise les notifications pour recevoir les nouvelles courses.');
+    return false;
+  }
+
+  await ensureAudioReady();
+
+  if (role === 'admin') {
+    adminNotificationReady = true;
+    setStoredNotificationPreference(NOTIFICATION_STORAGE_KEYS.adminEnabled, true);
+    updateNotificationButtons();
+    await showBrowserNotification('Notifications admin activées', 'Tu recevras une alerte pour chaque nouvelle réservation.', 'admin-enabled');
+  } else if (role === 'driver') {
+    driverNotificationReady = true;
+    setStoredNotificationPreference(NOTIFICATION_STORAGE_KEYS.driverEnabled, true);
+    updateNotificationButtons();
+    await showBrowserNotification('Notifications chauffeur activées', 'Tu recevras une alerte quand une course te sera assignée.', 'driver-enabled');
+  }
+
+  await playNotificationBeep();
+  return true;
+}
+
+function updateNotificationButtons() {
+  const adminBtn = document.getElementById('enableAdminNotificationsBtn');
+  if (adminBtn) {
+    adminBtn.textContent = adminNotificationReady ? 'Notifications admin activées' : 'Activer les notifications admin';
+  }
+  const driverBtn = document.getElementById('enableDriverNotificationsBtn');
+  if (driverBtn) {
+    driverBtn.textContent = driverNotificationReady ? 'Notifications chauffeur activées' : 'Activer les notifications chauffeur';
+  }
+}
+
+async function notifyAdminNewReservation(item) {
+  const title = 'Nouvelle réservation 🚕';
+  const body = `${reservationPickup(item) || 'Départ'} → ${reservationDropoff(item) || 'Arrivée'} • ${reservationName(item) || 'Client'}`;
+  await showBrowserNotification(title, body, 'admin-new-reservation');
+  await playNotificationBeep();
+}
+
+async function notifyDriverNewAssignment(item) {
+  const title = 'Nouvelle course assignée 🚖';
+  const body = `${reservationPickup(item) || 'Départ'} → ${reservationDropoff(item) || 'Arrivée'} • ${formatDateTime(reservationDateTime(item))}`;
+  await showBrowserNotification(title, body, 'driver-new-assignment');
+  await playNotificationBeep();
+}
+
 function initThemeAndPwa() {
   const selector = document.getElementById('themeSelector');
   if (selector) {
@@ -181,7 +311,12 @@ function initThemeAndPwa() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
   }
+
+  adminNotificationReady = getStoredNotificationPreference(NOTIFICATION_STORAGE_KEYS.adminEnabled);
+  driverNotificationReady = getStoredNotificationPreference(NOTIFICATION_STORAGE_KEYS.driverEnabled);
+  updateNotificationButtons();
 }
+
 
 function initFirebase() {
   if (!window.firebase || !window.FIREBASE_CONFIG) {
@@ -694,7 +829,18 @@ function subscribeReservations() {
   unsubscribeReservations = db.collection(RESERVATIONS_COLLECTION)
     .orderBy('createdAt', 'desc')
     .onSnapshot((snapshot) => {
-      reservationsCache = snapshot.docs.map(mapReservationDoc);
+      const nextReservations = snapshot.docs.map(mapReservationDoc);
+      const nextIds = new Set(nextReservations.map((item) => item.id));
+      if (adminNotificationReady) {
+        if (adminKnownReservationIds.size) {
+          const newItems = nextReservations.filter((item) => !adminKnownReservationIds.has(item.id));
+          newItems.forEach((item) => { notifyAdminNewReservation(item); });
+        }
+        adminKnownReservationIds = nextIds;
+      } else {
+        adminKnownReservationIds = nextIds;
+      }
+      reservationsCache = nextReservations;
       renderReservations();
     }, (error) => {
       const syncStatus = document.getElementById('syncStatus');
@@ -707,11 +853,22 @@ function subscribeDriverReservations(uid) {
   unsubscribeDriverReservations = db.collection(RESERVATIONS_COLLECTION)
     .where('driverId', '==', uid)
     .onSnapshot((snapshot) => {
-      driverReservationsCache = snapshot.docs.map(mapReservationDoc).sort((a, b) => {
+      const nextReservations = snapshot.docs.map(mapReservationDoc).sort((a, b) => {
         const ta = a.createdAt?.seconds || 0;
         const tb = b.createdAt?.seconds || 0;
         return tb - ta;
       });
+      const nextIds = new Set(nextReservations.map((item) => item.id));
+      if (driverNotificationReady) {
+        if (driverKnownReservationIds.size) {
+          const newItems = nextReservations.filter((item) => !driverKnownReservationIds.has(item.id));
+          newItems.forEach((item) => { notifyDriverNewAssignment(item); });
+        }
+        driverKnownReservationIds = nextIds;
+      } else {
+        driverKnownReservationIds = nextIds;
+      }
+      driverReservationsCache = nextReservations;
       renderDriverReservations();
     }, (error) => {
       const syncStatus = document.getElementById('driverSyncStatus');
@@ -756,6 +913,10 @@ function initDashboardPage() {
 
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     await auth.signOut();
+  });
+
+  document.getElementById('enableAdminNotificationsBtn')?.addEventListener('click', async () => {
+    await enableNotificationsForRole('admin');
   });
 
   document.getElementById('searchReservation')?.addEventListener('input', renderReservations);
@@ -826,6 +987,7 @@ function initDashboardPage() {
       setDashboardVisibility(false);
       reservationsCache = [];
       driversCache = [];
+      adminKnownReservationIds = new Set();
       renderReservations();
       if (unsubscribeReservations) { unsubscribeReservations(); unsubscribeReservations = null; }
       if (unsubscribeDrivers) { unsubscribeDrivers(); unsubscribeDrivers = null; }
@@ -872,6 +1034,10 @@ function initDriverPage() {
     await auth.signOut();
   });
 
+  document.getElementById('enableDriverNotificationsBtn')?.addEventListener('click', async () => {
+    await enableNotificationsForRole('driver');
+  });
+
   auth.onAuthStateChanged(async (user) => {
     const syncStatus = document.getElementById('driverSyncStatus');
     currentUser = user || null;
@@ -879,6 +1045,7 @@ function initDriverPage() {
     if (!user) {
       setDriverDashboardVisibility(false);
       driverReservationsCache = [];
+      driverKnownReservationIds = new Set();
       renderDriverReservations();
       if (unsubscribeDriverReservations) { unsubscribeDriverReservations(); unsubscribeDriverReservations = null; }
       if (syncStatus) syncStatus.textContent = 'Non connecté';
