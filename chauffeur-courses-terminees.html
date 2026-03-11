@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Taxi Live Sorel-Tracy - Espace Chauffeur</title>
+<title>Taxi Live Sorel-Tracy - Courses terminées chauffeur</title>
 <meta name="description" content="Service de taxi à Sorel-Tracy et transferts vers Montréal et l’aéroport. Réservation rapide 24/7 avec Taxi Live Sorel-Tracy.">
 <meta name="keywords" content="taxi sorel-tracy, taxi sorel, taxi tracy, taxi aéroport montréal depuis sorel, transport sorel-tracy">
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
@@ -24,15 +24,15 @@
   </div>
   <nav class="menu">
     <a href="index.html">Réservation</a>
-    <a href="chauffeurs.html" class="active">Espace chauffeur</a>
-    <a href="chauffeur-courses-terminees.html">Courses terminées</a>
+    <a href="chauffeurs.html">Espace chauffeur</a>
+    <a href="chauffeur-courses-terminees.html" class="active">Courses terminées</a>
     <a href="acces-admin-taxi-live.html">Admin</a>
   </nav>
   <div class="hero-cta">
     <a class="hero-btn primary" href="tel:5144640121"><i class="fa fa-headset"></i> Dispatch</a>
     <a class="hero-btn secondary" href="index.html#reservationForm"><i class="fa fa-calendar-check"></i> Réserver</a>
   </div>
-  <p>Interface chauffeur optimisée pour accepter, suivre et terminer les courses rapidement. Les courses terminées sont déplacées dans la page dédiée.</p>
+  <p>Historique chauffeur des courses terminées avec montant saisi à la fin de chaque course.</p>
 </header>
 
 <div class="dashboard-wrapper">
@@ -48,11 +48,12 @@
   <section class="dashboard-card hidden" id="driverDashboardCard">
     <div class="dashboard-topbar driver-shell-topbar">
       <div>
-        <h2>Centre chauffeur</h2>
+        <h2>Courses terminées chauffeur</h2>
         <p class="small-muted" id="driverBadge"></p>
         <p class="small-muted" id="driverSyncStatus">Connexion en cours…</p>
       </div>
       <div class="admin-topbar-actions">
+        <a href="chauffeurs.html" class="secondary-btn"><i class="fa fa-taxi"></i> Retour aux courses actives</a>
         <button id="driverAvailabilityBtn" class="secondary-btn">Passer hors ligne</button>
         <button id="enableDriverNotificationsBtn" class="secondary-btn">Activer notifications</button>
         <button id="driverLogoutBtn" class="secondary-btn">Déconnexion</button>
@@ -76,7 +77,7 @@
 
       <div class="ops-card driver-next-card">
         <div class="ops-card-header">
-          <div><h3>Prochaine course</h3><p class="small-muted">La course la plus proche à traiter.</p></div>
+          <div><h3>Prochaine course</h3><p class="small-muted">Dernière course complétée.</p></div>
           <span class="badge driver">Priorité</span>
         </div>
         <div id="driverNextTripBox" class="next-trip-box"><p class="small-muted">Aucune course assignée.</p></div>
@@ -95,16 +96,15 @@
     <div class="filter-toolbar card-like filter-card driver-filter-card">
       <div class="dispatch-toolbar driver-dispatch-toolbar">
         <div class="quick-filters">
-          <button class="quick-filter driver-quick-filter active" data-driver-quick="all">Toutes</button>
+          <button class="quick-filter driver-quick-filter active" data-driver-quick="done">Terminées</button>
           <button class="quick-filter driver-quick-filter" data-driver-quick="today">Aujourd'hui</button>
-          <button class="quick-filter driver-quick-filter" data-driver-quick="active">En cours</button>
-          <button class="quick-filter driver-quick-filter" data-driver-quick="urgent">Urgentes</button>
-          <a class="quick-filter driver-quick-filter" href="chauffeur-courses-terminees.html">Terminées</a>
+          <button class="quick-filter driver-quick-filter" data-driver-quick="all">Toutes</button>
+          <button class="quick-filter driver-quick-filter" data-driver-quick="done">Terminées</button>
         </div>
         <div class="filter-grid driver-filter-grid">
           <input id="driverSearchReservation" type="search" placeholder="Rechercher nom, téléphone, adresse…">
           <select id="driverStatusFilter">
-            <option value="all">Tous statuts</option>
+            <option value="all">Terminées</option><option value="completed">Terminées</option>
             <option value="assigned">Assignée</option>
             <option value="accepted">Acceptée</option>
             <option value="on_the_way">En route</option>

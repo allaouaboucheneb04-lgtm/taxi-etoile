@@ -757,6 +757,48 @@ function renderDriversMiniList() {
 }
 
 
+
+function isAdminCompletedPage() {
+  return /admin-courses-accomplies\.html$/i.test(window.location.pathname);
+}
+
+function isDriverCompletedPage() {
+  return /chauffeur-courses-terminees\.html$/i.test(window.location.pathname);
+}
+
+async function promptCourseAmount(existingValue) {
+  const initial = existingValue != null && String(existingValue).trim() ? String(existingValue).trim() : '';
+  const value = window.prompt('Montant de la course ($)', initial);
+  if (value === null) return null;
+  const normalized = String(value).replace(',', '.').trim();
+  if (!normalized) {
+    alert('Le montant est obligatoire pour terminer la course.');
+    return undefined;
+  }
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) {
+    alert('Montant invalide.');
+    return undefined;
+  }
+  return Math.round(amount * 100) / 100;
+}
+
+async function updateReservationStatusWithRules(id, nextStatus, item) {
+  if (!id || !db || !nextStatus) return false;
+  const payload = { status: nextStatus };
+  if (nextStatus === 'completed') {
+    let amount = await promptCourseAmount(item?.fareAmount ?? item?.amount ?? item?.montant ?? '');
+    if (amount === null) return false;
+    if (amount === undefined) return false;
+    payload.fareAmount = amount;
+    payload.montant = amount;
+    payload.completedAt = firebase.firestore.FieldValue.serverTimestamp();
+    payload.completedByDriverId = currentUser?.uid || item?.driverId || '';
+  }
+  await db.collection(RESERVATIONS_COLLECTION).doc(id).update(payload);
+  return true;
+}
+
 function reservationDirectionValue(item) {
   const raw = String(item?.direction || '').toLowerCase();
   if (raw.includes('retour')) return 'retour';
@@ -777,12 +819,13 @@ function getFilteredReservationsData() {
     const tripType = item.groupId ? 'aller-retour' : (reservationRoundTrip(item) ? 'aller-retour' : 'aller-simple');
     const matchesTrip = tripFilter === 'all' || tripFilter === tripType;
     const normalizedStatus = normalizeStatus(item.status);
+    const pageStatusOk = isAdminCompletedPage() ? normalizedStatus === 'completed' : normalizedStatus !== 'completed';
     const matchesStatus = statusFilter === 'all' || normalizedStatus === statusFilter;
     const matchesDate = dateFilterMatch(item, dateFilter);
     const matchesDriver = driverFilter === 'all' || (driverFilter === 'none' ? !item.driverId : item.driverId === driverFilter);
     const matchesQuick = activeQuickFilter === 'all'
       || (activeQuickFilter === 'urgent' ? reservationIsUrgent(item) : true);
-    return matchesSearch && matchesTrip && matchesStatus && matchesDate && matchesDriver && matchesQuick;
+    return pageStatusOk && matchesSearch && matchesTrip && matchesStatus && matchesDate && matchesDriver && matchesQuick;
   }).sort((a, b) => compareReservations(a, b, sortFilter));
 }
 
@@ -1216,7 +1259,7 @@ function renderReservations() {
     select.addEventListener('change', async () => {
       const id = select.getAttribute('data-status-id');
       if (!id || !db) return;
-      try { await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: select.value }); }
+      try { const item = reservationsCache.find((entry) => entry.id === id); await updateReservationStatusWithRules(id, select.value, item); }
       catch (error) { alert('Mise à jour impossible : ' + (error.message || 'erreur')); }
     });
   });
@@ -1324,7 +1367,7 @@ Statut: ${statusLabel(item.status)}`;
       const id = button.getAttribute('data-quick-id');
       const status = button.getAttribute('data-quick-status');
       if (!id || !db || !status) return;
-      try { await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status }); }
+      try { const item = reservationsCache.find((entry) => entry.id === id); await updateReservationStatusWithRules(id, status, item); }
       catch (error) { alert('Mise à jour impossible : ' + (error.message || 'erreur')); }
     });
   });
@@ -1481,6 +1524,7 @@ function renderDriverReservations() {
         <div><strong>Vol :</strong> ${escapeHtml(reservationFlightNumber(item) || '—')}</div>
         <div><strong>Groupe :</strong> ${escapeHtml(item.groupId || '—')}</div>
         <div><strong>Course liée :</strong> ${escapeHtml(item.linkedTripId || '—')}</div>
+        <div><strong>Montant :</strong> ${escapeHtml(item.fareAmount ?? item.montant ?? '—')}${(item.fareAmount ?? item.montant) != null && String(item.fareAmount ?? item.montant) !== '' ? '$' : ''}</div>
         <div style="grid-column:1/-1;"><strong>Notes :</strong> ${escapeHtml(item.adminNote || item.notes || '—')}</div>
       </div>
       <div class="driver-status-actions">
@@ -1508,7 +1552,8 @@ function renderDriverReservations() {
       const id = select.getAttribute('data-status-id');
       if (!id || !db) return;
       try {
-        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: select.value });
+        const item = driverReservationsCache.find((entry) => entry.id === id);
+        await updateReservationStatusWithRules(id, select.value, item);
       } catch (error) {
         alert('Mise à jour impossible : ' + (error.message || 'erreur'));
       }
@@ -1521,7 +1566,8 @@ function renderDriverReservations() {
       const value = button.getAttribute('data-driver-status-value');
       if (!id || !db || !value) return;
       try {
-        await db.collection(RESERVATIONS_COLLECTION).doc(id).update({ status: value });
+        const item = driverReservationsCache.find((entry) => entry.id === id);
+        await updateReservationStatusWithRules(id, value, item);
       } catch (error) {
         alert('Mise à jour impossible : ' + (error.message || 'erreur'));
       }

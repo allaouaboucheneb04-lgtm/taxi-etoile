@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Réservations & Dispatch</title>
+<title>Courses accomplies</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
 <link rel="manifest" href="manifest-admin.json">
@@ -42,7 +42,7 @@
   <section class="dashboard-card hidden" id="dashboardCard">
     <div class="dashboard-topbar admin-shell-topbar">
       <div>
-        <h2 id="pageTitle">Réservations & Dispatch</h2>
+        <h2 id="pageTitle">Courses accomplies</h2>
         <p class="small-muted">Système admin pro séparé par modules</p>
         <p class="small-muted" id="adminBadge"></p>
         <p class="small-muted" id="syncStatus">Connexion en cours…</p>
@@ -70,11 +70,11 @@
         </div>
 
         <a href="acces-admin-taxi-live.html" class="admin-nav-link"><i class="fa fa-chart-line"></i><span>Dashboard</span></a>
-        <a href="admin-reservations.html" class="admin-nav-link active"><i class="fa fa-taxi"></i><span>Réservations</span></a>
+        <a href="admin-reservations.html" class="admin-nav-link"><i class="fa fa-taxi"></i><span>Réservations</span></a>
         <a href="admin-planning.html" class="admin-nav-link"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
         <a href="admin-clients.html" class="admin-nav-link"><i class="fa fa-address-book"></i><span>Clients</span></a>
         <a href="admin-chauffeurs.html" class="admin-nav-link"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
-        <a href="admin-courses-accomplies.html" class="admin-nav-link"><i class="fa fa-circle-check"></i><span>Courses accomplies</span></a>
+        <a href="admin-courses-accomplies.html" class="admin-nav-link active"><i class="fa fa-circle-check"></i><span>Courses accomplies</span></a>
         <a href="admin-outils.html" class="admin-nav-link"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
         <div class="admin-side-note">
           <strong>Conseil dispatch</strong>
@@ -84,26 +84,26 @@
       <main class="admin-main">
         <section class="module-hero-card">
           <div>
-            <div class="module-breadcrumb">Admin Pro <span>/</span> Réservations</div>
-            <h3>Dispatch actif</h3>
-            <p>Assigne, filtre et surveille les courses en direct. Les courses terminées vont dans la page Courses accomplies.</p>
+            <div class="module-breadcrumb">Admin Pro <span>/</span> Courses accomplies</div>
+            <h3>Courses accomplies</h3>
+            <p>Historique des courses terminées avec montant, chauffeur et détails de service.</p>
           </div>
           <div class="module-hero-actions">
-            <a href="admin-reservations.html" class="ghost-action"><i class="fa fa-taxi"></i> Dispatch</a>
+            <a href="admin-reservations.html" class="ghost-action"><i class="fa fa-taxi"></i> Dispatch actif</a>
             <a href="admin-planning.html" class="ghost-action"><i class="fa fa-calendar-days"></i> Planning</a>
           </div>
         </section>
         
 <section class="admin-page-grid">
   <div class="admin-page-intro card-like">
-    <h3>Dispatch & réservations</h3>
-    <p class="small-muted">Filtre les courses, assigne les chauffeurs, marque les urgences et traite le dispatch en temps réel.</p>
+    <h3>Historique des courses accomplies</h3>
+    <p class="small-muted">Toutes les courses terminées sortent du dispatch et apparaissent ici avec leur montant.</p>
   </div>
   <div class="filter-toolbar card-like filter-card">
     <div class="filter-grid admin-filter-grid">
       <input id="searchReservation" type="search" placeholder="Rechercher client, téléphone, adresse, email…">
       <select id="tripFilter"><option value="all">Tous les trajets</option><option value="aller-simple">Aller simple</option><option value="aller-retour">Aller-retour</option></select>
-      <select id="statusFilter"><option value="all">Statuts actifs</option><option value="pending">En attente</option><option value="assigned">Assignée</option><option value="accepted">Acceptée</option><option value="on_the_way">En route</option><option value="cancelled">Annulée</option></select>
+      <select id="statusFilter"><option value="all">Toutes les terminées</option><option value="completed">Terminées</option></select>
       <select id="dateFilter"><option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="tomorrow">Demain</option><option value="upcoming">7 prochains jours</option><option value="past">Passées</option></select>
       <select id="driverFilter"><option value="all">Tous chauffeurs</option><option value="none">Sans chauffeur</option></select>
       <select id="sortFilter"><option value="datetime_asc">Date course ↑</option><option value="datetime_desc">Date course ↓</option><option value="created_desc">Création récente</option><option value="client_asc">Client A-Z</option></select>
