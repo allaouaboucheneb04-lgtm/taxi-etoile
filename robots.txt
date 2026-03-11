@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin.html
+Disallow: /acces-admin-taxi-live.html
+Disallow: /chauffeurs.html
 
 Sitemap: https://allaouaboucheneb04-lgtm.github.io/taxi-etoile/sitemap.xml

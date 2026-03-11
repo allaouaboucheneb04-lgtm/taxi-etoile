@@ -193,11 +193,7 @@ service cloud.firestore {
     match /admins/{uid} {
       allow read: if isOwner(uid) || isAdmin();
 
-      allow create: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['email', 'role', 'active', 'createdAt'])
-        && request.resource.data.email is string
-        && request.resource.data.role == 'admin'
-        && request.resource.data.active == true;
+      allow create: if false;
 
       allow update: if isAdmin()
         && request.resource.data.keys().hasOnly(['email', 'role', 'active', 'createdAt'])
