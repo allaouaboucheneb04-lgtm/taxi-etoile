@@ -37,7 +37,7 @@
 <header class="hero">
   <div class="logo">
     <img src="logo-taxi-live.png" alt="Logo Taxi Live Sorel-Tracy">
-    <h1>Taxi Live Sorel-Tracy</h1>
+    <h1 data-site-service-name>Taxi Live Sorel-Tracy</h1>
   </div>
 
   <nav class="menu">
@@ -54,7 +54,7 @@
 
   <div class="hero-cta">
     <a class="hero-btn primary" href="index.html#reservationForm"><i class="fa fa-calendar-check"></i> Réserver</a>
-    <a class="hero-btn secondary" href="tel:5144640121"><i class="fa fa-phone"></i> Appeler</a>
+    <a class="hero-btn secondary site-call-link" data-site-call-link href="tel:5144640121"><i class="fa fa-phone"></i> Appeler</a>
   </div>
 
 
@@ -121,6 +121,6 @@ if ('serviceWorker' in navigator) {
 
 <script src="hamburger-menu.js"></script>
 
-<div class="mobile-sticky-actions"><a class="reserve" href="index.html#reservationForm">Réserver</a><a class="call" href="tel:5144640121">Appeler</a></div>
+<div class="mobile-sticky-actions"><a class="reserve" data-site-reserve-label href="index.html#reservationForm">Réserver</a><a class="call site-call-link" data-site-call-link href="tel:5144640121">Appeler</a></div>
 </body>
 </html>

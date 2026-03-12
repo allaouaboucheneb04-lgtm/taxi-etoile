@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Paramètres du site</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
+<link rel="manifest" href="manifest-admin.json">
+<meta name="theme-color" content="#FFCA28">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taxi Live Admin">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-touch-fullscreen" content="yes">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-pro-app">
+<header class="hero admin-hero">
+  <div class="logo">
+    <img src="logo-taxi-live.png" alt="Logo Taxi Live Sorel-Tracy">
+    <h1>Taxi Live Dispatch Center</h1>
+  </div>
+  <nav class="menu">
+    <a href="index.html">Réservation</a>
+    <a href="acces-admin-taxi-live.html" class="active">Accès Admin</a>
+    <a href="chauffeurs.html">Espace chauffeur</a>
+  </nav>
+  <p>Paramètres du site : téléphone, bouton appeler, réservations et textes visibles.</p>
+</header>
+<div class="dashboard-wrapper">
+  <section class="dashboard-card" id="siteSettingsLoginCard">
+    <h2>Connexion admin sécurisée</h2>
+    <p class="small-muted">Connecte-toi avec ton compte administrateur autorisé.</p>
+    <div class="input-group"><i class="fa fa-envelope"></i><input type="email" id="siteSettingsAdminUser" placeholder="Email admin"></div>
+    <div class="input-group"><i class="fa fa-lock"></i><input type="password" id="siteSettingsAdminPass" placeholder="Mot de passe"></div>
+    <button id="siteSettingsLoginBtn">Se connecter</button>
+    <p id="siteSettingsLoginError" class="error-message hidden"></p>
+  </section>
+  <section class="dashboard-card hidden" id="siteSettingsDashboardCard">
+    <div class="dashboard-topbar admin-shell-topbar">
+      <button type="button" id="adminMenuToggle" class="admin-menu-toggle"><i class="fa fa-bars"></i><span>Menu</span></button>
+      <div>
+        <h2>Paramètres du site</h2>
+        <p class="small-muted">Gère ce que le client voit sur le site.</p>
+      </div>
+      <div class="admin-topbar-actions">
+        <button id="siteSettingsLogoutBtn" class="secondary-btn">Déconnexion</button>
+      </div>
+    </div>
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <div class="admin-brand-card">
+          <div class="admin-brand-top">
+            <img src="logo-taxi-live.png" alt="Taxi Live">
+            <div>
+              <strong>Taxi Live Admin</strong>
+              <span>Paramètres du site</span>
+            </div>
+          </div>
+          <div class="admin-brand-kpis">
+            <span><i class="fa fa-mobile-screen"></i> Site client</span>
+            <span><i class="fa fa-bolt"></i> Temps réel</span>
+          </div>
+        </div>
+
+        <a href="acces-admin-taxi-live.html" class="admin-nav-link"><i class="fa fa-chart-line"></i><span>Dashboard</span></a>
+        <a href="admin-reservations.html" class="admin-nav-link"><i class="fa fa-taxi"></i><span>Réservations</span></a>
+        <a href="admin-planning.html" class="admin-nav-link"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
+        <a href="admin-clients.html" class="admin-nav-link"><i class="fa fa-address-book"></i><span>Clients</span></a>
+        <a href="admin-chauffeurs.html" class="admin-nav-link"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
+        <a href="admin-outils.html" class="admin-nav-link"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
+        <a href="admin-site-settings.html" class="admin-nav-link active"><i class="fa fa-sliders"></i><span>Paramètres du site</span></a>
+      </aside>
+      <main class="admin-main settings-main">
+        <section class="ops-card">
+          <div class="ops-card-header"><div><h3>Contrôle du site client</h3><p class="small-muted">Active/masque le bouton appeler, change le numéro et les messages du site.</p></div></div>
+          <form id="siteSettingsForm" class="settings-grid">
+            <label class="settings-field"><span>Nom du service</span><input id="siteServiceName" type="text" placeholder="Taxi Live Sorel-Tracy"></label>
+            <label class="settings-field"><span>Téléphone cliquable</span><input id="sitePhone" type="text" placeholder="5144640121"></label>
+            <label class="settings-field"><span>Téléphone affiché</span><input id="siteDisplayPhone" type="text" placeholder="(514) 464-0121"></label>
+            <label class="settings-field"><span>Email de contact</span><input id="siteSupportEmail" type="email" placeholder="taxilivesoreltracy@gmail.com"></label>
+            <label class="settings-field full"><span>Message d'accueil</span><input id="siteHeroTagline" type="text" placeholder="Votre taxi local à Sorel-Tracy, Montréal et aéroport 24/7"></label>
+            <label class="settings-field"><span>Texte bouton réserver</span><input id="siteReserveButtonLabel" type="text" placeholder="Réserver"></label>
+            <label class="settings-field"><span>Texte bouton appeler</span><input id="siteCallButtonLabel" type="text" placeholder="Appeler"></label>
+            <label class="settings-field full"><span>Message si réservations fermées</span><textarea id="siteDisabledMessage" rows="3" placeholder="Les réservations en ligne sont fermées pour le moment. Appelez-nous directement."></textarea></label>
+
+            <label class="settings-toggle"><input id="siteShowCallButton" type="checkbox" checked> <span>Afficher le bouton appeler sur le site</span></label>
+            <label class="settings-toggle"><input id="siteReservationsEnabled" type="checkbox" checked> <span>Activer les réservations en ligne</span></label>
+
+            <div class="settings-actions full">
+              <button type="submit">Enregistrer</button>
+              <button type="button" class="secondary-btn" id="siteSettingsResetBtn">Réinitialiser</button>
+            </div>
+            <p id="siteSettingsMsg" class="hidden"></p>
+          </form>
+        </section>
+
+        <section class="ops-card">
+          <div class="ops-card-header"><div><h3>Aperçu rapide</h3><p class="small-muted">Voici comment le haut du site client va s’afficher.</p></div></div>
+          <div class="site-preview-card">
+            <div class="site-preview-top">
+              <strong id="sitePreviewName">Taxi Live Sorel-Tracy</strong>
+              <p id="sitePreviewTagline">Votre taxi local à Sorel-Tracy, Montréal et aéroport 24/7</p>
+            </div>
+            <div class="site-preview-actions">
+              <button type="button" class="hero-btn primary"><span id="sitePreviewReserve">Réserver</span></button>
+              <a href="#" class="hero-btn secondary" id="sitePreviewCall"><i class="fa fa-phone"></i> Appeler</a>
+            </div>
+            <p class="small-muted">Téléphone affiché : <span id="sitePreviewPhone">(514) 464-0121</span></p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </section>
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="firebase-config.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

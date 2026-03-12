@@ -100,6 +100,21 @@ function expandRoundTrips(list){
 const ADMINS_COLLECTION = 'admins';
 const RESERVATIONS_COLLECTION = 'reservations';
 const DRIVERS_COLLECTION = 'drivers';
+const SITE_SETTINGS_COLLECTION = 'settings';
+const SITE_SETTINGS_DOC = 'site';
+const DEFAULT_SITE_SETTINGS = {
+  serviceName: 'Taxi Live Sorel-Tracy',
+  phone: '5144640121',
+  displayPhone: '(514) 464-0121',
+  showCallButton: true,
+  supportEmail: 'taxilivesoreltracy@gmail.com',
+  reservationsEnabled: true,
+  disabledMessage: 'Les réservations en ligne sont fermées pour le moment. Appelez-nous directement.',
+  heroTagline: 'Votre taxi local à Sorel-Tracy, Montréal et aéroport 24/7',
+  callButtonLabel: 'Appeler',
+  reserveButtonLabel: 'Réserver'
+};
+
 
 let db = null;
 let auth = null;
@@ -2048,6 +2063,227 @@ function setDriverDashboardVisibility(loggedIn) {
   if (dashboardCard) dashboardCard.classList.toggle('hidden', !loggedIn);
 }
 
+
+function normalizeSiteSettings(data = {}) {
+  const phone = String(data.phone || DEFAULT_SITE_SETTINGS.phone || '').trim();
+  const digits = cleanPhoneNumber(phone);
+  const displayPhone = String(data.displayPhone || data.display_phone || '').trim() || (phone ? phone : DEFAULT_SITE_SETTINGS.displayPhone);
+  return {
+    ...DEFAULT_SITE_SETTINGS,
+    ...data,
+    phone: digits || cleanPhoneNumber(DEFAULT_SITE_SETTINGS.phone),
+    displayPhone,
+    showCallButton: data.showCallButton !== false,
+    reservationsEnabled: data.reservationsEnabled !== false,
+    supportEmail: String(data.supportEmail || data.email || DEFAULT_SITE_SETTINGS.supportEmail || '').trim(),
+    heroTagline: String(data.heroTagline || DEFAULT_SITE_SETTINGS.heroTagline || '').trim(),
+    serviceName: String(data.serviceName || DEFAULT_SITE_SETTINGS.serviceName || '').trim(),
+    disabledMessage: String(data.disabledMessage || DEFAULT_SITE_SETTINGS.disabledMessage || '').trim(),
+    callButtonLabel: String(data.callButtonLabel || DEFAULT_SITE_SETTINGS.callButtonLabel || '').trim(),
+    reserveButtonLabel: String(data.reserveButtonLabel || DEFAULT_SITE_SETTINGS.reserveButtonLabel || '').trim()
+  };
+}
+
+function siteSettingsDocRef() {
+  if (!db) return null;
+  return db.collection(SITE_SETTINGS_COLLECTION).doc(SITE_SETTINGS_DOC);
+}
+
+function updateReservationAvailabilityUi(enabled, message) {
+  const form = document.getElementById('reservationForm');
+  const submitBtn = form?.querySelector('button[type="submit"], #submitReservationBtn');
+  let banner = document.getElementById('siteReservationNotice');
+  if (!enabled) {
+    if (!banner && form) {
+      banner = document.createElement('div');
+      banner.id = 'siteReservationNotice';
+      banner.className = 'settings-site-banner';
+      form.parentNode.insertBefore(banner, form);
+    }
+    if (banner) {
+      banner.textContent = message || DEFAULT_SITE_SETTINGS.disabledMessage;
+      banner.style.display = 'block';
+    }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add('disabled-btn');
+      submitBtn.title = message || DEFAULT_SITE_SETTINGS.disabledMessage;
+    }
+  } else {
+    if (banner) banner.style.display = 'none';
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('disabled-btn');
+      submitBtn.title = '';
+    }
+  }
+}
+
+function applySiteSettingsToPublicPage(settings) {
+  const safe = normalizeSiteSettings(settings);
+  document.querySelectorAll('[data-site-service-name]').forEach((el) => { el.textContent = safe.serviceName; });
+  document.querySelectorAll('[data-site-tagline]').forEach((el) => { el.textContent = safe.heroTagline; });
+  document.querySelectorAll('[data-site-email]').forEach((el) => {
+    if (el.tagName === 'A') el.href = `mailto:${safe.supportEmail}`;
+    el.textContent = safe.supportEmail;
+  });
+  const callTargets = [
+    ...document.querySelectorAll('[data-site-call-link]'),
+    ...document.querySelectorAll('.hero-btn.secondary[href^="tel:"], .mobile-sticky-actions .call[href^="tel:"]')
+  ];
+  const seen = new Set();
+  callTargets.forEach((el) => {
+    if (seen.has(el)) return;
+    seen.add(el);
+    el.href = safe.phone ? `tel:${safe.phone}` : '#';
+    const label = safe.callButtonLabel || DEFAULT_SITE_SETTINGS.callButtonLabel;
+    if (el.dataset?.callLabelTarget !== 'false') {
+      const textNode = [...el.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      if (textNode) textNode.textContent = ` ${label}`;
+      else if (!el.querySelector('span')) el.append(document.createTextNode(label));
+    }
+    el.style.display = safe.showCallButton ? '' : 'none';
+  });
+  document.querySelectorAll('[data-site-phone]').forEach((el) => { el.textContent = safe.displayPhone || safe.phone; });
+  document.querySelectorAll('[data-site-reserve-label]').forEach((el) => { el.textContent = safe.reserveButtonLabel || DEFAULT_SITE_SETTINGS.reserveButtonLabel; });
+  updateReservationAvailabilityUi(safe.reservationsEnabled, safe.disabledMessage);
+}
+
+function subscribeSiteSettingsForPublic() {
+  const hasPublicShell = !!(document.getElementById('reservationForm') || document.querySelector('.hero'));
+  const isAdminShell = document.body.classList.contains('admin-pro-app');
+  const isDriverShell = !!document.getElementById('driverDashboardCard');
+  if (!hasPublicShell || isAdminShell || isDriverShell || !db) return;
+  const ref = siteSettingsDocRef();
+  if (!ref) return;
+  ref.onSnapshot((doc) => {
+    const settings = normalizeSiteSettings(doc.exists ? doc.data() : {});
+    applySiteSettingsToPublicPage(settings);
+  }, () => {
+    applySiteSettingsToPublicPage(DEFAULT_SITE_SETTINGS);
+  });
+}
+
+function fillSiteSettingsForm(settings) {
+  const safe = normalizeSiteSettings(settings);
+  const map = {
+    siteServiceName: safe.serviceName,
+    sitePhone: safe.phone,
+    siteDisplayPhone: safe.displayPhone,
+    siteSupportEmail: safe.supportEmail,
+    siteHeroTagline: safe.heroTagline,
+    siteDisabledMessage: safe.disabledMessage,
+    siteCallButtonLabel: safe.callButtonLabel,
+    siteReserveButtonLabel: safe.reserveButtonLabel
+  };
+  Object.entries(map).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || '';
+  });
+  const showCall = document.getElementById('siteShowCallButton');
+  if (showCall) showCall.checked = !!safe.showCallButton;
+  const reservationsEnabled = document.getElementById('siteReservationsEnabled');
+  if (reservationsEnabled) reservationsEnabled.checked = !!safe.reservationsEnabled;
+  const previewName = document.getElementById('sitePreviewName');
+  if (previewName) previewName.textContent = safe.serviceName;
+  const previewTagline = document.getElementById('sitePreviewTagline');
+  if (previewTagline) previewTagline.textContent = safe.heroTagline;
+  const previewPhone = document.getElementById('sitePreviewPhone');
+  if (previewPhone) previewPhone.textContent = safe.displayPhone || safe.phone;
+  const previewCall = document.getElementById('sitePreviewCall');
+  if (previewCall) previewCall.style.display = safe.showCallButton ? '' : 'none';
+}
+
+function collectSiteSettingsFormData() {
+  return normalizeSiteSettings({
+    serviceName: document.getElementById('siteServiceName')?.value?.trim(),
+    phone: document.getElementById('sitePhone')?.value?.trim(),
+    displayPhone: document.getElementById('siteDisplayPhone')?.value?.trim(),
+    supportEmail: document.getElementById('siteSupportEmail')?.value?.trim(),
+    heroTagline: document.getElementById('siteHeroTagline')?.value?.trim(),
+    disabledMessage: document.getElementById('siteDisabledMessage')?.value?.trim(),
+    callButtonLabel: document.getElementById('siteCallButtonLabel')?.value?.trim(),
+    reserveButtonLabel: document.getElementById('siteReserveButtonLabel')?.value?.trim(),
+    showCallButton: !!document.getElementById('siteShowCallButton')?.checked,
+    reservationsEnabled: !!document.getElementById('siteReservationsEnabled')?.checked
+  });
+}
+
+function initSiteSettingsPage() {
+  const loginCard = document.getElementById('siteSettingsLoginCard');
+  const dashboardCard = document.getElementById('siteSettingsDashboardCard');
+  const form = document.getElementById('siteSettingsForm');
+  if (!loginCard || !dashboardCard || !form) return;
+  if (!auth || !db) {
+    showInlineMessage('siteSettingsLoginError', 'Le service n’est pas configuré.', true);
+    return;
+  }
+
+  const setVisibility = (loggedIn) => {
+    loginCard.classList.toggle('hidden', loggedIn);
+    dashboardCard.classList.toggle('hidden', !loggedIn);
+  };
+
+  document.getElementById('siteSettingsLoginBtn')?.addEventListener('click', async () => {
+    hideInlineMessage('siteSettingsLoginError');
+    try {
+      await auth.signInWithEmailAndPassword(
+        document.getElementById('siteSettingsAdminUser')?.value?.trim(),
+        document.getElementById('siteSettingsAdminPass')?.value
+      );
+    } catch (error) {
+      showInlineMessage('siteSettingsLoginError', error.message || 'Connexion impossible.', true);
+    }
+  });
+
+  document.getElementById('siteSettingsLogoutBtn')?.addEventListener('click', async () => {
+    await auth.signOut();
+  });
+
+  document.getElementById('siteSettingsResetBtn')?.addEventListener('click', async () => {
+    fillSiteSettingsForm(DEFAULT_SITE_SETTINGS);
+    showInlineMessage('siteSettingsMsg', 'Valeurs remises localement. Clique sur Enregistrer pour publier.', false);
+  });
+
+  form.addEventListener('input', () => fillSiteSettingsForm(collectSiteSettingsFormData()));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideInlineMessage('siteSettingsMsg');
+    const payload = collectSiteSettingsFormData();
+    try {
+      await siteSettingsDocRef().set({
+        ...payload,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: currentUser?.email || ''
+      }, { merge: true });
+      fillSiteSettingsForm(payload);
+      showInlineMessage('siteSettingsMsg', 'Paramètres du site enregistrés.', false);
+    } catch (error) {
+      showInlineMessage('siteSettingsMsg', 'Enregistrement impossible : ' + (error.message || 'erreur'), true);
+    }
+  });
+
+  auth.onAuthStateChanged(async (user) => {
+    currentUser = user || null;
+    if (!user) {
+      setVisibility(false);
+      return;
+    }
+    try {
+      await verifyAdminAccess(user);
+      setVisibility(true);
+      const ref = siteSettingsDocRef();
+      ref.onSnapshot((doc) => {
+        fillSiteSettingsForm(doc.exists ? doc.data() : DEFAULT_SITE_SETTINGS);
+      });
+    } catch (error) {
+      await auth.signOut();
+      showInlineMessage('siteSettingsLoginError', error.message || 'Accès refusé.', true);
+      setVisibility(false);
+    }
+  });
+}
+
 function initDashboardPage() {
   const loginCard = document.getElementById('loginCard');
   const dashboardCard = document.getElementById('dashboardCard');
@@ -2315,7 +2551,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initThemeAndPwa();
   initFirebase();
   initSecretLauncher();
+  subscribeSiteSettingsForPublic();
   initReservationPage();
   initDashboardPage();
+  initSiteSettingsPage();
   initDriverPage();
 });
