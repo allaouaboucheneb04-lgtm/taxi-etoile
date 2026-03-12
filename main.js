@@ -544,7 +544,55 @@ function uniqueSuggestions(items) {
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, 6);
+  });
+}
+
+function rankSuggestionsByPriority(query, items) {
+  const q = (query || '').toLowerCase().trim();
+  const nearby = [
+    ['sorel', 18],
+    ['sorel-tracy', 20],
+    ['tracy', 12],
+    ['saint-joseph-de-sorel', 12],
+    ['saint-joseph', 8],
+    ['montreal', 14],
+    ['montréal', 14],
+    ['centre-ville de montréal', 18],
+    ['gare centrale', 18],
+    ['dorval', 18],
+    ['aéroport', 18],
+    ['aeroport', 18],
+    ['trudeau', 18],
+    ['yul', 18],
+    ['longueuil', 10],
+    ['boucherville', 10],
+    ['laval', 8]
+  ];
+
+  const queryBoosts = [
+    { test: /aer|aéro|aero|yul|trud|dorv/, matches: ['aéroport', 'aeroport', 'trudeau', 'yul', 'dorval'], boost: 30 },
+    { test: /sor|tra/, matches: ['sorel', 'sorel-tracy', 'tracy'], boost: 24 },
+    { test: /gar|centr/, matches: ['gare centrale'], boost: 26 },
+    { test: /mon|cent/, matches: ['montreal', 'montréal', 'centre-ville de montréal'], boost: 16 }
+  ];
+
+  return items
+    .map((item, index) => {
+      const hay = `${item.title || ''} ${item.subtitle || ''} ${item.label || ''}`.toLowerCase();
+      let score = 0;
+      if (q && hay.startsWith(q)) score += 40;
+      if (q && hay.includes(q)) score += 15;
+      nearby.forEach(([word, pts]) => {
+        if (hay.includes(word)) score += pts;
+      });
+      queryBoosts.forEach((rule) => {
+        if (rule.test.test(q) && rule.matches.some((word) => hay.includes(word))) score += rule.boost;
+      });
+      return { item, score, index };
+    })
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((entry) => entry.item)
+    .slice(0, 6);
 }
 
 function closeAutocomplete(container) {
@@ -610,7 +658,7 @@ async function searchAddress(query, container, input) {
 
     if (AUTOCOMPLETE_REQUESTS.get(container.id) !== requestId) return;
 
-    const cleaned = uniqueSuggestions(suggestions);
+    const cleaned = rankSuggestionsByPriority(query, uniqueSuggestions(suggestions));
     renderAutocompleteResults(container, input, cleaned);
   } catch {
     if (AUTOCOMPLETE_REQUESTS.get(container.id) !== requestId) return;
@@ -679,6 +727,18 @@ function initReservationPage() {
   setupAutocomplete('arrivee', 'arrivee-results');
   setupAutocomplete('retourDepart', 'retour-depart-results');
   setupAutocomplete('retourArrivee', 'retour-arrivee-results');
+
+  document.querySelectorAll('.quick-destination-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target || 'arrivee';
+      const address = btn.dataset.address || '';
+      const input = document.getElementById(targetId);
+      if (!input) return;
+      input.value = address;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.focus();
+    });
+  });
 
   const allerRetourCheckbox = document.getElementById('allerRetour');
   const retourFields = document.getElementById('retourFields');
