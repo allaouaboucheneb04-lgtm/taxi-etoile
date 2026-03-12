@@ -477,21 +477,43 @@ function initFirebase() {
 const AUTOCOMPLETE_REQUESTS = new Map();
 const AUTOCOMPLETE_DEBOUNCE = new Map();
 
+function formatSuggestionItem(parts = []) {
+  const clean = parts.map((part) => String(part || '').trim()).filter(Boolean);
+  if (!clean.length) return null;
+  const title = clean.slice(0, 2).join(', ');
+  const subtitle = clean.slice(2).join(', ');
+  return {
+    title,
+    subtitle,
+    label: subtitle ? `${title}, ${subtitle}` : title
+  };
+}
+
 function normalizePhotonLabel(feature) {
-  if (!feature?.properties) return '';
+  if (!feature?.properties) return null;
   const p = feature.properties;
-  const parts = [
-    p.name,
-    p.housenumber ? `${p.housenumber} ${p.street || ''}`.trim() : p.street,
+  const primaryStreet = p.housenumber ? `${p.housenumber} ${p.street || ''}`.trim() : p.street;
+  return formatSuggestionItem([
+    p.name || primaryStreet,
+    p.name && primaryStreet && p.name !== primaryStreet ? primaryStreet : '',
     p.postcode,
     p.city || p.county || p.state,
     p.country
-  ].filter(Boolean);
-  return Array.from(new Set(parts)).join(', ');
+  ]);
 }
 
 function normalizeNominatimLabel(place) {
-  return place?.display_name || '';
+  if (!place) return null;
+  const a = place.address || {};
+  return formatSuggestionItem([
+    a.house_number && (a.road || a.pedestrian || a.footway)
+      ? `${a.house_number} ${a.road || a.pedestrian || a.footway}`.trim()
+      : (a.road || a.pedestrian || a.footway || a.neighbourhood || a.suburb || place.name),
+    a.suburb || a.city_district || a.village || a.town || a.city,
+    a.state,
+    a.postcode,
+    a.country || 'Canada'
+  ]) || { title: place.display_name || '', subtitle: '', label: place.display_name || '' };
 }
 
 async function fetchPhotonSuggestions(query) {
@@ -501,8 +523,8 @@ async function fetchPhotonSuggestions(query) {
   if (!res.ok) throw new Error('photon_error');
   const json = await res.json();
   return (json.features || [])
-    .map((feature) => ({ label: normalizePhotonLabel(feature) }))
-    .filter((item) => item.label);
+    .map((feature) => normalizePhotonLabel(feature))
+    .filter((item) => item?.label);
 }
 
 async function fetchNominatimSuggestions(query) {
@@ -511,8 +533,8 @@ async function fetchNominatimSuggestions(query) {
   if (!res.ok) throw new Error('nominatim_error');
   const json = await res.json();
   return (json || [])
-    .map((place) => ({ label: normalizeNominatimLabel(place) }))
-    .filter((item) => item.label);
+    .map((place) => normalizeNominatimLabel(place))
+    .filter((item) => item?.label);
 }
 
 function uniqueSuggestions(items) {
@@ -540,8 +562,14 @@ function renderAutocompleteResults(container, input, suggestions) {
     const option = document.createElement('button');
     option.type = 'button';
     option.className = 'autocomplete-item';
-    option.textContent = item.label;
     option.setAttribute('data-index', String(index));
+    option.innerHTML = `
+      <span class="autocomplete-icon">📍</span>
+      <span class="autocomplete-text">
+        <span class="autocomplete-title">${item.title || item.label}</span>
+        ${item.subtitle ? `<span class="autocomplete-subtitle">${item.subtitle}</span>` : ''}
+      </span>
+    `;
     option.addEventListener('click', () => {
       input.value = item.label;
       closeAutocomplete(container);
