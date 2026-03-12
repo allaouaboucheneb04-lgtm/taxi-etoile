@@ -751,6 +751,57 @@ function initReservationPage() {
   const valisesInput = document.getElementById('valises');
   const vehiculeSelect = document.getElementById('vehicule');
   const submitBtn = document.getElementById('submitBtn');
+  const allerDateInput = document.getElementById('heure');
+  const retourDateInput = document.getElementById('retourHeure');
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function toLocalInputValue(dateObj) {
+    return `${dateObj.getFullYear()}-${pad2(dateObj.getMonth()+1)}-${pad2(dateObj.getDate())}T${pad2(dateObj.getHours())}:${pad2(dateObj.getMinutes())}`;
+  }
+
+  function roundToNextFive(dateObj) {
+    const d = new Date(dateObj.getTime());
+    d.setSeconds(0,0);
+    const minutes = d.getMinutes();
+    const next = Math.ceil(minutes / 5) * 5;
+    d.setMinutes(next);
+    return d;
+  }
+
+  function applyDatetimeMins() {
+    const now = roundToNextFive(new Date());
+    if (allerDateInput) {
+      allerDateInput.min = toLocalInputValue(now);
+    }
+    if (retourDateInput) {
+      retourDateInput.min = allerDateInput?.value || toLocalInputValue(now);
+    }
+  }
+
+  function setDateValue(targetId, mode) {
+    const input = document.getElementById(targetId);
+    if (!input) return;
+    const now = roundToNextFive(new Date());
+
+    if (mode === 'now') {
+      const soon = new Date(now.getTime() + 15 * 60000);
+      input.value = toLocalInputValue(soon);
+    } else if (mode === 'later') {
+      input.showPicker?.();
+      input.focus();
+      return;
+    } else if (mode === 'copy-plus-day') {
+      const base = allerDateInput?.value ? new Date(allerDateInput.value) : now;
+      const nextDay = new Date(base.getTime() + 24 * 60 * 60 * 1000);
+      input.value = toLocalInputValue(nextDay);
+    } else if (mode === 'clear') {
+      input.value = '';
+    }
+
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    input.showPicker?.();
+  }
 
   function toggleRetourFields() {
     const enabled = allerRetourCheckbox?.checked;
@@ -768,6 +819,11 @@ function initReservationPage() {
   allerRetourCheckbox?.addEventListener('change', toggleRetourFields);
   passagersInput?.addEventListener('input', suggestVehicle);
   valisesInput?.addEventListener('input', suggestVehicle);
+  allerDateInput?.addEventListener('change', applyDatetimeMins);
+  document.querySelectorAll('.datetime-chip').forEach((btn) => {
+    btn.addEventListener('click', () => setDateValue(btn.dataset.target, btn.dataset.mode));
+  });
+  applyDatetimeMins();
   toggleRetourFields();
   suggestVehicle();
 

@@ -118,9 +118,20 @@
       </div>
     </div>
 
-    <div class="input-group">
-      <i class="fa fa-clock"></i>
-      <input type="datetime-local" id="heure" name="heure" required>
+    <div class="datetime-block">
+      <div class="field-label-row">
+        <label class="label-field" for="heure">Date et heure de prise en charge</label>
+        <span class="field-hint">Touchez pour choisir</span>
+      </div>
+      <div class="datetime-quick-actions">
+        <button type="button" class="datetime-chip" data-target="heure" data-mode="now">Maintenant</button>
+        <button type="button" class="datetime-chip" data-target="heure" data-mode="later">Programmer une course</button>
+      </div>
+      <div class="input-group date-input-group">
+        <i class="fa fa-clock"></i>
+        <input type="datetime-local" id="heure" name="heure" required aria-label="Date et heure de prise en charge">
+      </div>
+      <p class="small-helper">Choisissez la date et l’heure où le chauffeur doit arriver.</p>
     </div>
 
     <div class="input-group">
@@ -168,9 +179,20 @@
         </div>
       </div>
 
-      <div class="input-group">
-        <i class="fa fa-clock"></i>
-        <input type="datetime-local" id="retourHeure" name="retour_heure">
+      <div class="datetime-block retour-datetime-block">
+        <div class="field-label-row">
+          <label class="label-field" for="retourHeure">Date et heure du retour</label>
+          <span class="field-hint">Retour programmé</span>
+        </div>
+        <div class="datetime-quick-actions">
+          <button type="button" class="datetime-chip" data-target="retourHeure" data-mode="copy-plus-day">Jour suivant</button>
+          <button type="button" class="datetime-chip" data-target="retourHeure" data-mode="clear">Effacer</button>
+        </div>
+        <div class="input-group date-input-group">
+          <i class="fa fa-clock"></i>
+          <input type="datetime-local" id="retourHeure" name="retour_heure" aria-label="Date et heure du retour">
+        </div>
+        <p class="small-helper">Choisissez la date et l’heure du trajet retour.</p>
       </div>
 
       <div class="input-group">
