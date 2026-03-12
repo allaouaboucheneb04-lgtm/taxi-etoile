@@ -206,7 +206,7 @@ body.theme-taxi { background: #FFF8E1; color: #333; }
   border-radius: 0 0 10px 10px;
   box-shadow:0 6px 16px rgba(0,0,0,0.12);
   display:none;
-  z-index:100;
+  z-index:1200;
   max-height:220px;
   overflow:auto;
 }

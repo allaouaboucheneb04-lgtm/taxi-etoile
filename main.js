@@ -495,8 +495,9 @@ function normalizeNominatimLabel(place) {
 }
 
 async function fetchPhotonSuggestions(query) {
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=fr&osm_tag=place:house&bbox=-141,41,-52,84`;
-  const res = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+  const enrichedQuery = /canada|quebec|québec/i.test(query) ? query : `${query}, Québec, Canada`;
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(enrichedQuery)}&limit=8&lang=fr`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'fr,fr-CA;q=0.9,en;q=0.8' } });
   if (!res.ok) throw new Error('photon_error');
   const json = await res.json();
   return (json.features || [])
@@ -560,7 +561,7 @@ function updateAutocompleteActive(container) {
 }
 
 async function searchAddress(query, container, input) {
-  if (!container || !input || query.trim().length < 3) {
+  if (!container || !input || query.trim().length < 2) {
     closeAutocomplete(container);
     return;
   }
@@ -572,6 +573,9 @@ async function searchAddress(query, container, input) {
     let suggestions = [];
     try {
       suggestions = await fetchPhotonSuggestions(query);
+      if (!suggestions.length) {
+        suggestions = await fetchNominatimSuggestions(query);
+      }
     } catch {
       suggestions = await fetchNominatimSuggestions(query);
     }
