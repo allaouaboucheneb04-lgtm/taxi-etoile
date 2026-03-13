@@ -16,6 +16,10 @@ function splitDateTimeParts(datetimeString){
 const EMAILJS_PUBLIC_KEY = (window.EMAILJS_PUBLIC_KEY || 'W-3rUaqJdvEjPE1J0');
 const EMAILJS_SERVICE_ID = (window.EMAILJS_SERVICE_ID || 'service_5phpu0d');
 const EMAILJS_TEMPLATE_ID = (window.EMAILJS_TEMPLATE_ID || 'template_06gymkw');
+const EMAILJS_ADMIN_TEMPLATE_ID = (window.EMAILJS_ADMIN_TEMPLATE_ID || EMAILJS_TEMPLATE_ID);
+const EMAILJS_CLIENT_TEMPLATE_ID = (window.EMAILJS_CLIENT_TEMPLATE_ID || EMAILJS_TEMPLATE_ID);
+const TAXI_APP_INSTALL_URL = (window.TAXI_APP_INSTALL_URL || '');
+const TAXI_GOOGLE_REVIEW_URL = (window.TAXI_GOOGLE_REVIEW_URL || '');
 let emailJsReady = false;
 
 function initEmailJs() {
@@ -45,13 +49,34 @@ function formatDatetimeForEmail(value) {
   return { date: s, time: '' };
 }
 
+function resolveBaseSiteUrl() {
+  try {
+    const url = new URL(window.location.href);
+    const pathname = url.pathname || '/';
+    const basePath = pathname.endsWith('/') ? pathname : pathname.replace(/[^/]*$/, '');
+    return `${url.origin}${basePath}`;
+  } catch (error) {
+    return '';
+  }
+}
+
 function buildReservationEmailParams(baseReservation, extras = {}) {
   const aller = formatDatetimeForEmail(baseReservation.datetime || '');
   const retour = formatDatetimeForEmail(extras.retourHeure || '');
+  const siteUrl = resolveBaseSiteUrl();
+  const appUrl = TAXI_APP_INSTALL_URL || siteUrl;
+  const reviewUrl = TAXI_GOOGLE_REVIEW_URL || 'https://www.google.com/search?q=Taxi+Live+Sorel-Tracy+avis';
+  const serviceName = siteSettings?.serviceName || DEFAULT_SITE_SETTINGS.serviceName || 'Taxi Live Sorel-Tracy';
+  const displayPhone = siteSettings?.displayPhone || DEFAULT_SITE_SETTINGS.displayPhone || '+1 (514) 867-4616';
+  const supportEmail = siteSettings?.supportEmail || DEFAULT_SITE_SETTINGS.supportEmail || '';
   return {
     name: baseReservation.clientName || '',
     phone: baseReservation.phone || '',
     email: baseReservation.email || '',
+    to_email: baseReservation.email || '',
+    reply_to: supportEmail,
+    subject: `Confirmation de votre réservation - ${serviceName}`,
+    confirmation_title: 'Votre réservation a bien été reçue',
     trip_type: extras.allerRetour ? 'aller-retour' : 'aller-simple',
     pickup: baseReservation.pickup || '',
     destination: baseReservation.dropoff || '',
@@ -65,16 +90,38 @@ function buildReservationEmailParams(baseReservation, extras = {}) {
     luggage: String(baseReservation.luggage ?? ''),
     message: [baseReservation.notes || '', extras.retourDetails || ''].filter(Boolean).join(' | '),
     flight_number: baseReservation.flightNumber || '',
-    return_flight_number: extras.retourNumeroVol || ''
+    return_flight_number: extras.retourNumeroVol || '',
+    business_name: serviceName,
+    business_phone: displayPhone,
+    business_email: supportEmail,
+    business_site: siteUrl,
+    app_install_title: 'Ajoutez notre application sur votre téléphone',
+    app_install_text: `Ouvrez ${appUrl || 'notre site'}, puis choisissez « Ajouter à l’écran d’accueil » pour utiliser Taxi Live comme une application.`,
+    app_url: appUrl,
+    review_title: 'Votre avis Google nous aide beaucoup',
+    review_text: 'Après votre course, laissez-nous un avis sur Google en recherchant Taxi Live Sorel-Tracy. Merci pour votre confiance.',
+    review_url: reviewUrl,
+    confirmation_footer: `Besoin d’aide ? Appelez-nous au ${displayPhone}.`
   };
 }
 
-async function sendReservationEmail(baseReservation, extras = {}) {
+async function sendReservationEmail(templateId, baseReservation, extras = {}) {
   if (!initEmailJs()) {
     throw new Error('EmailJS non initialisé');
   }
   const params = buildReservationEmailParams(baseReservation, extras);
-  return await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
+  return await window.emailjs.send(EMAILJS_SERVICE_ID, templateId, params);
+}
+
+async function sendAdminReservationEmail(baseReservation, extras = {}) {
+  return await sendReservationEmail(EMAILJS_ADMIN_TEMPLATE_ID, baseReservation, extras);
+}
+
+async function sendClientConfirmationEmail(baseReservation, extras = {}) {
+  if (!baseReservation.email) {
+    return { skipped: true, reason: 'missing-email' };
+  }
+  return await sendReservationEmail(EMAILJS_CLIENT_TEMPLATE_ID, baseReservation, extras);
 }
 // --- End EmailJS config ---
 
@@ -928,16 +975,27 @@ function initReservationPage() {
       }
 
       let emailNotice = '';
+      const emailPayload = {
+        allerRetour,
+        retourDepart,
+        retourArrivee,
+        retourHeure,
+        retourNumeroVol,
+        retourDetails
+      };
       try {
-        await sendReservationEmail(baseReservation, {
-          allerRetour,
-          retourDepart,
-          retourArrivee,
-          retourHeure,
-          retourNumeroVol,
-          retourDetails
-        });
-        emailNotice = ' Email de confirmation admin envoyé.';
+        const emailResults = [];
+        await sendAdminReservationEmail(baseReservation, emailPayload);
+        emailResults.push('email admin envoyé');
+
+        const clientResult = await sendClientConfirmationEmail(baseReservation, emailPayload);
+        if (clientResult?.skipped) {
+          emailResults.push('pas d’email client saisi');
+        } else {
+          emailResults.push('email client envoyé');
+        }
+
+        emailNotice = ' ' + emailResults.join(' • ') + '.';
       } catch (emailError) {
         console.error('EmailJS send error:', emailError);
         emailNotice = ` Réservation enregistrée, mais email non envoyé: ${emailError?.text || emailError?.message || 'vérifie EmailJS'}.`;
