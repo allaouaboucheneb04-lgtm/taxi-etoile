@@ -104,8 +104,8 @@ const SITE_SETTINGS_COLLECTION = 'settings';
 const SITE_SETTINGS_DOC = 'site';
 const DEFAULT_SITE_SETTINGS = {
   serviceName: 'Taxi Live Sorel-Tracy',
-  phone: '5144640121',
-  displayPhone: '(514) 464-0121',
+  phone: '+15148674616',
+  displayPhone: '+1 (514) 867-4616',
   showCallButton: true,
   supportEmail: 'taxilivesoreltracy@gmail.com',
   reservationsEnabled: true,
