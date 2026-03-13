@@ -1,141 +1,138 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>Réservations & Dispatch</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
-<link rel="manifest" href="manifest-admin.json">
-<meta name="theme-color" content="#FFCA28">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Taxi Live Admin">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="format-detection" content="telephone=no">
-<meta name="apple-touch-fullscreen" content="yes">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<meta charset="utf-8"/>
+<title>Réservations &amp; Dispatch</title>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<meta content="noindex,nofollow,noarchive" name="robots"/>
+<link href="manifest-admin.json" rel="manifest"/>
+<meta content="#FFCA28" name="theme-color"/>
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
+<meta content="Taxi Live Admin" name="apple-mobile-web-app-title"/>
+<meta content="yes" name="mobile-web-app-capable"/>
+<meta content="telephone=no" name="format-detection"/>
+<meta content="yes" name="apple-touch-fullscreen"/>
+<link href="icons/apple-touch-icon.png" rel="apple-touch-icon"/>
+<link href="style.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 </head>
 <body class="admin-pro-app">
 <header class="hero admin-hero">
-  <div class="logo">
-    <img src="logo-taxi-live.png" alt="Logo Taxi Live Sorel-Tracy">
-    <h1>Taxi Live Dispatch Center</h1>
-  </div>
-  <nav class="menu">
-    <a href="index.html">Réservation</a>
-    <a href="acces-admin-taxi-live.html" class="active">Accès Admin</a>
-    <a href="chauffeurs.html">Espace chauffeur</a>
-  </nav>
-  <p>Système admin pro séparé par modules, optimisé pour le dispatch, le planning, les clients et les chauffeurs.</p>
+<div class="logo">
+<img alt="Logo Taxi Live Sorel-Tracy" src="logo-taxi-live.png"/>
+<h1>Taxi Live Dispatch Center</h1>
+</div>
+<nav class="menu">
+<a href="index.html">Réservation</a>
+<a class="active" href="acces-admin-taxi-live.html">Accès Admin</a>
+<a href="chauffeurs.html">Espace chauffeur</a>
+</nav>
+<p>Système admin pro séparé par modules, optimisé pour le dispatch, le planning, les clients et les chauffeurs.</p>
 </header>
 <div class="dashboard-wrapper">
-  <section class="dashboard-card" id="loginCard">
-    <h2>Connexion admin sécurisée</h2>
-    <p class="small-muted">Connecte-toi avec ton compte administrateur autorisé.</p>
-    <div class="input-group"><i class="fa fa-envelope"></i><input type="email" id="adminUser" placeholder="Email admin"></div>
-    <div class="input-group"><i class="fa fa-lock"></i><input type="password" id="adminPass" placeholder="Mot de passe"></div>
-    <button id="loginBtn">Se connecter</button>
-    <p id="loginError" class="error-message hidden"></p>
-  </section>
-  <section class="dashboard-card hidden" id="dashboardCard">
-    <div class="dashboard-topbar admin-shell-topbar">
-      <button type="button" id="adminMenuToggle" class="admin-menu-toggle"><i class="fa fa-bars"></i><span>Menu</span></button>
-      <div>
-        <h2 id="pageTitle">Réservations & Dispatch</h2>
-        <p class="small-muted">Système admin pro séparé par modules</p>
-        <p class="small-muted" id="adminBadge"></p>
-        <p class="small-muted" id="syncStatus">Système prêt</p>
-      </div>
-      <div class="admin-topbar-actions">
-        <button id="enableAdminNotificationsBtn" class="secondary-btn">Activer les notifications admin</button>
-        <button id="logoutBtn" class="secondary-btn">Déconnexion</button>
-      </div>
-    </div>
-    <div class="admin-shell">
-      <aside class="admin-sidebar">
-
-        <div class="admin-brand-card">
-          <div class="admin-brand-top">
-            <img src="logo-taxi-live.png" alt="Taxi Live">
-            <div>
-              <strong>Taxi Live Admin</strong>
-              <span>Dispatch professionnel</span>
-            </div>
-          </div>
-          <div class="admin-brand-kpis">
-            <span><i class="fa fa-shield-halved"></i> Accès sécurisé</span>
-            <span><i class="fa fa-bolt"></i> Temps réel</span>
-          </div>
-        </div>
-
-        <a href="acces-admin-taxi-live.html" class="admin-nav-link"><i class="fa fa-chart-line"></i><span>Dashboard</span></a>
-        <a href="admin-reservations.html" class="admin-nav-link active"><i class="fa fa-taxi"></i><span>Réservations</span></a>
-        <a href="admin-planning.html" class="admin-nav-link"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
-        <a href="admin-clients.html" class="admin-nav-link"><i class="fa fa-address-book"></i><span>Clients</span></a>
-        <a href="admin-chauffeurs.html" class="admin-nav-link"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
-        <a href="admin-outils.html" class="admin-nav-link"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
-        <a href="admin-site-settings.html" class="admin-nav-link"><i class="fa fa-sliders"></i><span>Paramètres du site</span></a>
-        <div class="admin-side-note">
-          <strong>Conseil dispatch</strong>
-          <p>Commence par le Dashboard, gère les urgences dans Réservations, suis le Planning, puis équilibre la charge dans Chauffeurs.</p>
-        </div>
-      </aside>
-      <main class="admin-main">
-        <section class="module-hero-card">
-          <div>
-            <div class="module-breadcrumb">Admin Pro <span>/</span> Réservations</div>
-            <h3>Dispatch</h3>
-            <p>Assigne, filtre et surveille toutes les courses en direct.</p>
-          </div>
-          <div class="module-hero-actions">
-            <a href="admin-reservations.html" class="ghost-action"><i class="fa fa-taxi"></i> Dispatch</a>
-            <a href="admin-planning.html" class="ghost-action"><i class="fa fa-calendar-days"></i> Planning</a>
-          </div>
-        </section>
-        
-<section class="admin-page-grid">
-  <div class="admin-page-intro card-like">
-    <h3>Dispatch & réservations</h3>
-    <p class="small-muted">Filtre les courses, assigne les chauffeurs, marque les urgences et traite le dispatch en temps réel.</p>
-  </div>
-  <div class="filter-toolbar card-like filter-card">
-    <div class="filter-grid admin-filter-grid">
-      <input id="searchReservation" type="search" placeholder="Rechercher client, téléphone, adresse, email…">
-      <select id="tripFilter"><option value="all">Tous les trajets</option><option value="aller-simple">Aller simple</option><option value="aller-retour">Aller-retour</option></select>
-      <select id="statusFilter"><option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="assigned">Assignée</option><option value="accepted">Acceptée</option><option value="on_the_way">En route</option><option value="completed">Terminée</option><option value="cancelled">Annulée</option></select>
-      <select id="dateFilter"><option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="tomorrow">Demain</option><option value="upcoming">7 prochains jours</option><option value="past">Passées</option></select>
-      <select id="driverFilter"><option value="all">Tous chauffeurs</option><option value="none">Sans chauffeur</option></select>
-      <select id="sortFilter"><option value="datetime_asc">Date course ↑</option><option value="datetime_desc">Date course ↓</option><option value="created_desc">Création récente</option><option value="client_asc">Client A-Z</option></select>
-    </div>
-    <div class="dispatch-toolbar">
-      <div class="quick-filters">
-        <button class="quick-filter active" data-quick="all">Toutes</button>
-        <button class="quick-filter" data-quick="today">Aujourd'hui</button>
-        <button class="quick-filter" data-quick="urgent">Urgentes</button>
-        <button class="quick-filter" data-quick="unassigned">Sans chauffeur</button>
-      </div>
-      <div class="dispatch-summary-card"><strong id="reservationsSummary">0 réservation affichée</strong><span id="nextCourseSummary">Aucune course planifiée.</span></div>
-      <div class="inline-tool-buttons"><button id="resetFiltersBtn" class="secondary-btn">Réinitialiser</button><button id="exportCsvBtn" class="secondary-btn">Exporter CSV</button></div>
-    </div>
-  </div>
-  <div class="stats-grid compact-stats-grid">
-    <div class="mini-stat"><span>En attente</span><strong id="statPending">0</strong></div>
-    <div class="mini-stat"><span>En cours</span><strong id="statInProgress">0</strong></div>
-    <div class="mini-stat"><span>Urgentes</span><strong id="statUrgent">0</strong></div>
-    <div class="mini-stat"><span>Sans chauffeur</span><strong id="statNoDriver">0</strong></div>
-  </div>
-  <div id="emptyState" class="empty-state" style="display:none;">Aucune réservation trouvée avec ces filtres.</div>
-  <div id="reservationsList"></div>
-  <div class="hidden-hook" aria-hidden="true"><div id="driversList"></div><span id="statTotal"></span><span id="statRoundTrip"></span><span id="statToday"></span><span id="statAssigned"></span><span id="statCompleted"></span><span id="statDrivers"></span><span id="statNextHour"></span><span id="statTomorrow"></span><span id="statCancelled"></span><div id="todayTimeline"></div><div id="driverLoadBoard"></div></div>
+<section class="dashboard-card" id="loginCard">
+<h2>Connexion admin sécurisée</h2>
+<p class="small-muted">Connecte-toi avec ton compte administrateur autorisé.</p>
+<div class="input-group"><i class="fa fa-envelope"></i><input id="adminUser" placeholder="Email admin" type="email"/></div>
+<div class="input-group"><i class="fa fa-lock"></i><input id="adminPass" placeholder="Mot de passe" type="password"/></div>
+<button id="loginBtn">Se connecter</button>
+<p class="error-message hidden" id="loginError"></p>
 </section>
-
-      </main>
-    </div>
-  </section>
+<section class="dashboard-card hidden" id="dashboardCard">
+<div class="dashboard-topbar admin-shell-topbar">
+<button class="admin-menu-toggle" id="adminMenuToggle" type="button"><i class="fa fa-bars"></i><span>Menu</span></button>
+<div>
+<h2 id="pageTitle">Réservations &amp; Dispatch</h2>
+<p class="small-muted">Système admin pro séparé par modules</p>
+<p class="small-muted" id="adminBadge"></p>
+<p class="small-muted" id="syncStatus">Système prêt</p>
 </div>
-<button id="installBtn" class="install-btn" style="display:none;">📲 Ajouter à l'écran d'accueil</button>
+<div class="admin-topbar-actions">
+<button class="secondary-btn" id="enableAdminNotificationsBtn">Activer les notifications admin</button>
+<button class="secondary-btn" id="logoutBtn">Déconnexion</button>
+</div>
+</div>
+<div class="admin-shell">
+<aside class="admin-sidebar">
+<div class="admin-brand-card">
+<div class="admin-brand-top">
+<img alt="Taxi Live" src="logo-taxi-live.png"/>
+<div>
+<strong>Taxi Live Admin</strong>
+<span>Dispatch professionnel</span>
+</div>
+</div>
+<div class="admin-brand-kpis">
+<span><i class="fa fa-shield-halved"></i> Accès sécurisé</span>
+<span><i class="fa fa-bolt"></i> Temps réel</span>
+</div>
+</div>
+<a class="admin-nav-link" href="acces-admin-taxi-live.html"><i class="fa fa-chart-line"></i><span>Dashboard</span></a>
+<a class="admin-nav-link active" href="admin-reservations.html"><i class="fa fa-taxi"></i><span>Réservations</span></a>
+<a class="admin-nav-link" href="admin-planning.html"><i class="fa fa-calendar-days"></i><span>Planning</span></a>
+<a class="admin-nav-link" href="admin-clients.html"><i class="fa fa-address-book"></i><span>Clients</span></a>
+<a class="admin-nav-link" href="admin-chauffeurs.html"><i class="fa fa-id-badge"></i><span>Chauffeurs</span></a>
+<a class="admin-nav-link" href="admin-outils.html"><i class="fa fa-screwdriver-wrench"></i><span>Outils</span></a>
+<a class="admin-nav-link" href="admin-site-settings.html"><i class="fa fa-sliders"></i><span>Paramètres du site</span></a>
+<div class="admin-side-note">
+<strong>Conseil dispatch</strong>
+<p>Commence par le Dashboard, gère les urgences dans Réservations, suis le Planning, puis équilibre la charge dans Chauffeurs.</p>
+</div>
+</aside>
+<main class="admin-main">
+<section class="module-hero-card">
+<div>
+<div class="module-breadcrumb">Admin Pro <span>/</span> Réservations</div>
+<h3>Dispatch</h3>
+<p>Assigne, filtre et surveille toutes les courses en direct.</p>
+</div>
+<div class="module-hero-actions">
+<a class="ghost-action" href="admin-reservations.html"><i class="fa fa-taxi"></i> Dispatch</a>
+<a class="ghost-action" href="admin-planning.html"><i class="fa fa-calendar-days"></i> Planning</a>
+</div>
+</section>
+<section class="admin-page-grid">
+<div class="admin-page-intro card-like">
+<h3>Dispatch &amp; réservations</h3>
+<p class="small-muted">Filtre les courses, assigne les chauffeurs, marque les urgences et traite le dispatch en temps réel.</p>
+</div>
+<div class="filter-toolbar card-like filter-card">
+<div class="filter-grid admin-filter-grid">
+<input id="searchReservation" placeholder="Rechercher client, téléphone, adresse, email…" type="search"/>
+<select id="tripFilter"><option value="all">Tous les trajets</option><option value="aller-simple">Aller simple</option><option value="aller-retour">Aller-retour</option></select>
+<select id="statusFilter"><option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="assigned">Assignée</option><option value="accepted">Acceptée</option><option value="on_the_way">En route</option><option value="completed">Terminée</option><option value="cancelled">Annulée</option></select>
+<select id="dateFilter"><option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="tomorrow">Demain</option><option value="upcoming">7 prochains jours</option><option value="past">Passées</option></select>
+<select id="driverFilter"><option value="all">Tous chauffeurs</option><option value="none">Sans chauffeur</option></select>
+<select id="sortFilter"><option value="datetime_asc">Date course ↑</option><option value="datetime_desc">Date course ↓</option><option value="created_desc">Création récente</option><option value="client_asc">Client A-Z</option></select>
+</div>
+<div class="dispatch-toolbar">
+<div class="quick-filters">
+<button class="quick-filter active" data-quick="all">Toutes</button>
+<button class="quick-filter" data-quick="today">Aujourd'hui</button>
+<button class="quick-filter" data-quick="urgent">Urgentes</button>
+<button class="quick-filter" data-quick="unassigned">Sans chauffeur</button>
+</div>
+<div class="dispatch-summary-card"><strong id="reservationsSummary">0 réservation affichée</strong><span id="nextCourseSummary">Aucune course planifiée.</span></div>
+<div class="inline-tool-buttons"><button class="secondary-btn" id="resetFiltersBtn">Réinitialiser</button><button class="secondary-btn" id="exportCsvBtn">Exporter CSV</button></div>
+</div>
+</div>
+<div class="stats-grid compact-stats-grid">
+<div class="mini-stat"><span>En attente</span><strong id="statPending">0</strong></div>
+<div class="mini-stat"><span>En cours</span><strong id="statInProgress">0</strong></div>
+<div class="mini-stat"><span>Urgentes</span><strong id="statUrgent">0</strong></div>
+<div class="mini-stat"><span>Sans chauffeur</span><strong id="statNoDriver">0</strong></div>
+</div>
+<div class="empty-state" id="emptyState" style="display:none;">Aucune réservation trouvée avec ces filtres.</div>
+<div id="reservationsList"></div>
+<div aria-hidden="true" class="hidden-hook"><div id="driversList"></div><span id="statTotal"></span><span id="statRoundTrip"></span><span id="statToday"></span><span id="statAssigned"></span><span id="statCompleted"></span><span id="statDrivers"></span><span id="statNextHour"></span><span id="statTomorrow"></span><span id="statCancelled"></span><div id="todayTimeline"></div><div id="driverLoadBoard"></div></div>
+</section>
+</main>
+</div>
+</section>
+</div>
+<button class="install-btn" id="installBtn" style="display:none;">📲 Ajouter à l'écran d'accueil</button>
 <div id="iosBanner" style="display:none; position:fixed; bottom:10px; left:10px; right:10px; background:#FFCA28; color:#333; padding:12px; border-radius:12px; text-align:center; z-index:9999; font-weight:700; box-shadow:0 6px 20px rgba(0,0,0,0.15);">
   Sur iPhone : appuie sur <strong>Partager</strong> puis <strong>Ajouter à l'écran d'accueil</strong>.
   <button id="closeIosBanner" style="margin-left:8px; background:#333; color:#fff; border:none; border-radius:8px; padding:6px 10px;">Fermer</button>
