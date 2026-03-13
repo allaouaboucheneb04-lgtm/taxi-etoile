@@ -69,6 +69,46 @@ function buildReservationEmailParams(baseReservation, extras = {}) {
   const serviceName = siteSettings?.serviceName || DEFAULT_SITE_SETTINGS.serviceName || 'Taxi Live Sorel-Tracy';
   const displayPhone = siteSettings?.displayPhone || DEFAULT_SITE_SETTINGS.displayPhone || '+1 (514) 867-4616';
   const supportEmail = siteSettings?.supportEmail || DEFAULT_SITE_SETTINGS.supportEmail || '';
+  const tripTypeLabel = extras.allerRetour ? 'Aller-retour' : 'Aller simple';
+  const notesValue = [baseReservation.notes || '', extras.retourDetails || ''].filter(Boolean).join(' | ');
+  const messageLines = [
+    'Votre réservation a bien été reçue.',
+    '',
+    `Type de course : ${tripTypeLabel}`,
+    `Départ : ${baseReservation.pickup || ''}`,
+    `Destination : ${baseReservation.dropoff || ''}`,
+    `Date : ${aller.date}`,
+    `Heure : ${aller.time}`,
+    `Véhicule : ${baseReservation.vehicleType || 'Berline'}`,
+    `Bagages : ${String(baseReservation.luggage ?? '') || '0'}`
+  ];
+  if (baseReservation.passengers !== undefined && baseReservation.passengers !== null && String(baseReservation.passengers) !== '') {
+    messageLines.push(`Passagers : ${String(baseReservation.passengers)}`);
+  }
+  if (baseReservation.flightNumber) {
+    messageLines.push(`Numéro de vol : ${baseReservation.flightNumber}`);
+  }
+  if (baseReservation.notes) {
+    messageLines.push(`Instructions : ${baseReservation.notes}`);
+  }
+  if (extras.allerRetour) {
+    messageLines.push('');
+    messageLines.push('Détails du retour :');
+    messageLines.push(`Retour départ : ${extras.retourDepart || baseReservation.dropoff || ''}`);
+    messageLines.push(`Retour destination : ${extras.retourArrivee || baseReservation.pickup || ''}`);
+    messageLines.push(`Retour date : ${retour.date}`);
+    messageLines.push(`Retour heure : ${retour.time}`);
+    if (extras.retourNumeroVol) {
+      messageLines.push(`Vol retour : ${extras.retourNumeroVol}`);
+    }
+    if (extras.retourDetails) {
+      messageLines.push(`Instructions retour : ${extras.retourDetails}`);
+    }
+  }
+  messageLines.push('');
+  messageLines.push(`Ajoutez notre application : ${appUrl}`);
+  messageLines.push(`Laissez-nous un avis Google : ${reviewUrl}`);
+  messageLines.push(`${serviceName} - ${displayPhone}`);
   return {
     name: baseReservation.clientName || '',
     phone: baseReservation.phone || '',
@@ -77,7 +117,9 @@ function buildReservationEmailParams(baseReservation, extras = {}) {
     reply_to: supportEmail,
     subject: `Confirmation de votre réservation - ${serviceName}`,
     confirmation_title: 'Votre réservation a bien été reçue',
-    trip_type: extras.allerRetour ? 'aller-retour' : 'aller-simple',
+    trip_type: tripTypeLabel,
+    trip_type_label: tripTypeLabel,
+    is_round_trip: extras.allerRetour ? 'Oui' : 'Non',
     pickup: baseReservation.pickup || '',
     destination: baseReservation.dropoff || '',
     date: aller.date,
@@ -86,11 +128,17 @@ function buildReservationEmailParams(baseReservation, extras = {}) {
     return_destination: extras.retourArrivee || '',
     return_date: retour.date,
     return_time: retour.time,
+    round_trip_details: extras.allerRetour
+      ? `Retour : ${extras.retourDepart || baseReservation.dropoff || ''} → ${extras.retourArrivee || baseReservation.pickup || ''} le ${retour.date} à ${retour.time}`
+      : '',
     passengers: String(baseReservation.passengers ?? ''),
     luggage: String(baseReservation.luggage ?? ''),
-    message: [baseReservation.notes || '', extras.retourDetails || ''].filter(Boolean).join(' | '),
+    notes: notesValue,
+    message: messageLines.filter(Boolean).join('
+'),
     flight_number: baseReservation.flightNumber || '',
     return_flight_number: extras.retourNumeroVol || '',
+    vehicle_type: baseReservation.vehicleType || 'Berline',
     business_name: serviceName,
     business_phone: displayPhone,
     business_email: supportEmail,
