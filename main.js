@@ -134,8 +134,7 @@ function buildReservationEmailParams(baseReservation, extras = {}) {
     passengers: String(baseReservation.passengers ?? ''),
     luggage: String(baseReservation.luggage ?? ''),
     notes: notesValue,
-    message: messageLines.filter(Boolean).join('
-'),
+    message: messageLines.filter(Boolean).join('\n'),
     flight_number: baseReservation.flightNumber || '',
     return_flight_number: extras.retourNumeroVol || '',
     vehicle_type: baseReservation.vehicleType || 'Berline',
