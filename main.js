@@ -161,6 +161,7 @@ const DEFAULT_SITE_SETTINGS = {
   callButtonLabel: 'Appeler',
   reserveButtonLabel: 'Réserver'
 };
+let siteSettings = { ...DEFAULT_SITE_SETTINGS };
 
 
 let db = null;
@@ -2141,6 +2142,8 @@ function normalizeSiteSettings(data = {}) {
     reserveButtonLabel: String(data.reserveButtonLabel || DEFAULT_SITE_SETTINGS.reserveButtonLabel || '').trim()
   };
 }
+siteSettings = normalizeSiteSettings(siteSettings);
+window.siteSettings = siteSettings;
 
 function siteSettingsDocRef() {
   if (!db) return null;
@@ -2179,6 +2182,8 @@ function updateReservationAvailabilityUi(enabled, message) {
 
 function applySiteSettingsToPublicPage(settings) {
   const safe = normalizeSiteSettings(settings);
+  siteSettings = { ...safe };
+  window.siteSettings = siteSettings;
   document.querySelectorAll('[data-site-service-name]').forEach((el) => { el.textContent = safe.serviceName; });
   document.querySelectorAll('[data-site-tagline]').forEach((el) => { el.textContent = safe.heroTagline; });
   document.querySelectorAll('[data-site-email]').forEach((el) => {
