@@ -863,6 +863,10 @@ function initReservationPage() {
   const submitBtn = document.getElementById('submitBtn');
   const allerDateInput = document.getElementById('heure');
   const retourDateInput = document.getElementById('retourHeure');
+  const departInput = document.getElementById('depart');
+  const arriveeInput = document.getElementById('arrivee');
+  const retourDepartInput = document.getElementById('retourDepart');
+  const retourArriveeInput = document.getElementById('retourArrivee');
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -913,10 +917,35 @@ function initReservationPage() {
     input.showPicker?.();
   }
 
+  function autoFillRetourAddresses(force = false) {
+    if (!allerRetourCheckbox?.checked) return;
+    if (retourDepartInput) {
+      const canFillDepart = force || !retourDepartInput.value.trim() || retourDepartInput.dataset.autofilled === 'true';
+      if (canFillDepart) {
+        retourDepartInput.value = arriveeInput?.value?.trim() || '';
+        retourDepartInput.dataset.autofilled = 'true';
+      }
+    }
+    if (retourArriveeInput) {
+      const canFillArrivee = force || !retourArriveeInput.value.trim() || retourArriveeInput.dataset.autofilled === 'true';
+      if (canFillArrivee) {
+        retourArriveeInput.value = departInput?.value?.trim() || '';
+        retourArriveeInput.dataset.autofilled = 'true';
+      }
+    }
+  }
+
   function toggleRetourFields() {
     const enabled = allerRetourCheckbox?.checked;
     retourFields?.classList.toggle('hidden', !enabled);
     retourRequiredFields.forEach((field) => { field.required = !!enabled; });
+    if (enabled) {
+      autoFillRetourAddresses(true);
+      if (!retourDateInput?.value) {
+        retourDateInput?.focus();
+        retourDateInput?.showPicker?.();
+      }
+    }
   }
 
   function suggestVehicle() {
@@ -930,6 +959,18 @@ function initReservationPage() {
   passagersInput?.addEventListener('input', suggestVehicle);
   valisesInput?.addEventListener('input', suggestVehicle);
   allerDateInput?.addEventListener('change', applyDatetimeMins);
+  departInput?.addEventListener('input', () => {
+    if (retourArriveeInput && retourArriveeInput.dataset.autofilled === 'true') autoFillRetourAddresses();
+  });
+  arriveeInput?.addEventListener('input', () => {
+    if (retourDepartInput && retourDepartInput.dataset.autofilled === 'true') autoFillRetourAddresses();
+  });
+  retourDepartInput?.addEventListener('input', () => {
+    retourDepartInput.dataset.autofilled = 'false';
+  });
+  retourArriveeInput?.addEventListener('input', () => {
+    retourArriveeInput.dataset.autofilled = 'false';
+  });
   document.querySelectorAll('.datetime-chip').forEach((btn) => {
     btn.addEventListener('click', () => setDateValue(btn.dataset.target, btn.dataset.mode));
   });
