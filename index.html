@@ -210,19 +210,47 @@
 <textarea id="retourDetails" name="retour_details" placeholder="Infos utiles retour : terminal, porte, heure d'atterrissage, lieu de rencontre..." rows="4"></textarea>
 </div>
 </div>
-<button id="submitBtn" type="submit">Réserver maintenant</button>
-<div class="hidden reservation-review-box" id="reservationReviewBox">
+<div class="form-action-row" id="formActionRow">
+<button id="submitBtn" type="submit">Continuer</button>
+</div>
+</form>
+
+<section class="hidden reservation-step-page" id="reservationReviewPage">
+<div class="reservation-step-header">
+<span class="reservation-step-badge">Étape 2</span>
 <h3>Vérifiez votre réservation</h3>
+<p>Vérifiez les détails avant l’envoi. S’il y a une erreur, vous pouvez modifier la réservation.</p>
+</div>
 <div class="reservation-review-content" id="reservationReviewContent"></div>
 <label class="checkbox-line review-checkbox-line">
 <input id="reviewConfirmCheckbox" type="checkbox"/>
         J’ai vérifié les détails de ma réservation
       </label>
+<div class="review-action-buttons">
 <button id="confirmSendBtn" type="button">Envoyer la réservation</button>
-<p class="small-helper">Après l’envoi, votre réservation sera confirmée et un email de confirmation vous sera envoyé.</p>
+<button id="editReservationBtn" type="button">Modifier la réservation</button>
 </div>
 <p class="hidden success-message" id="confirmation"></p>
-</form>
+</section>
+
+<section class="hidden reservation-step-page reservation-success-page" id="reservationSuccessPage">
+<div class="reservation-step-header">
+<span class="reservation-step-badge success">Confirmée</span>
+<h3>Réservation confirmée</h3>
+<p>Votre réservation a bien été envoyée. Un email de confirmation vous sera envoyé.</p>
+</div>
+<div class="reservation-success-card">
+<div class="reservation-success-icon">✅</div>
+<div>
+<strong>Merci d’avoir choisi Taxi Live Sorel-Tracy</strong>
+<p>Nous avons bien reçu votre demande. Gardez votre téléphone à proximité si nous avons besoin d’une précision.</p>
+</div>
+</div>
+<div class="review-action-buttons">
+<a class="success-call-btn site-call-link" data-site-call-link="" href="tel:+15148674616">Appeler si besoin</a>
+<button id="newReservationBtn" type="button">Faire une nouvelle réservation</button>
+</div>
+</section>
 <section class="seo-box">
 <h3>Villes desservies autour de Sorel-Tracy</h3>
 <p>Nous desservons aussi <a href="taxi-saint-joseph-de-sorel.html">Saint-Joseph-de-Sorel</a>, <a href="taxi-yamaska.html">Yamaska</a>, <a href="taxi-saint-robert.html">Saint-Robert</a>, <a href="taxi-sainte-anne-de-sorel.html">Sainte-Anne-de-Sorel</a>, <a href="taxi-saint-ours.html">Saint-Ours</a>, <a href="taxi-saint-roch-de-richelieu.html">Saint-Roch-de-Richelieu</a>, <a href="taxi-contrecoeur.html">Contrecoeur</a>, <a href="taxi-vercheres.html">Verchères</a>, <a href="taxi-lanoraie.html">Lanoraie</a>, <a href="taxi-berthierville.html">Berthierville</a>, <a href="taxi-joliette.html">Joliette</a>, <a href="taxi-drummondville.html">Drummondville</a>, <a href="taxi-trois-rivieres.html">Trois-Rivières</a>, <a href="taxi-longueuil.html">Longueuil</a> et <a href="taxi-montreal.html">Montréal</a>.</p>

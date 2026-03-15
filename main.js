@@ -861,10 +861,14 @@ function initReservationPage() {
   const valisesInput = document.getElementById('valises');
   const vehiculeSelect = document.getElementById('vehicule');
   const submitBtn = document.getElementById('submitBtn');
-  const reviewBox = document.getElementById('reservationReviewBox');
+  const formActionRow = document.getElementById('formActionRow');
+  const reviewPage = document.getElementById('reservationReviewPage');
+  const successPage = document.getElementById('reservationSuccessPage');
   const reviewContent = document.getElementById('reservationReviewContent');
   const reviewCheckbox = document.getElementById('reviewConfirmCheckbox');
   const confirmSendBtn = document.getElementById('confirmSendBtn');
+  const editReservationBtn = document.getElementById('editReservationBtn');
+  const newReservationBtn = document.getElementById('newReservationBtn');
   const allerDateInput = document.getElementById('heure');
   const retourDateInput = document.getElementById('retourHeure');
   const departInput = document.getElementById('depart');
@@ -981,6 +985,7 @@ function initReservationPage() {
   applyDatetimeMins();
   toggleRetourFields();
   suggestVehicle();
+  showFormStep();
 
   function formatDateTimeForReview(value) {
     if (!value) return 'Non indiqué';
@@ -1014,9 +1019,27 @@ function initReservationPage() {
     };
   }
 
-  function hideReviewBox() {
-    reviewBox?.classList.add('hidden');
+  function showFormStep() {
+    form.classList.remove('hidden');
+    formActionRow?.classList.remove('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.add('hidden');
     if (reviewCheckbox) reviewCheckbox.checked = false;
+  }
+
+  function showReviewStep() {
+    form.classList.add('hidden');
+    formActionRow?.classList.add('hidden');
+    reviewPage?.classList.remove('hidden');
+    successPage?.classList.add('hidden');
+    if (reviewCheckbox) reviewCheckbox.checked = false;
+  }
+
+  function showSuccessStep() {
+    form.classList.add('hidden');
+    formActionRow?.classList.add('hidden');
+    reviewPage?.classList.add('hidden');
+    successPage?.classList.remove('hidden');
   }
 
   function renderReservationReview(data) {
@@ -1069,6 +1092,10 @@ function initReservationPage() {
     if (confirmSendBtn) {
       confirmSendBtn.disabled = true;
       confirmSendBtn.textContent = 'Envoi en cours...';
+    }
+    if (editReservationBtn) {
+      editReservationBtn.disabled = true;
+      editReservationBtn.textContent = 'Modification indisponible...';
     }
 
     const formData = reservationFormData();
@@ -1145,20 +1172,24 @@ function initReservationPage() {
       }
 
       form.reset();
-      hideReviewBox();
       toggleRetourFields();
       suggestVehicle();
-      showInlineMessage('confirmation', '✅ Réservation confirmée. Un email de confirmation vous sera envoyé.', false);
+      showInlineMessage('confirmation', 'Réservation confirmée. Un email de confirmation vous sera envoyé.', false);
+      showSuccessStep();
     } catch (error) {
       showInlineMessage('confirmation', 'Erreur d’enregistrement : ' + (error.message || 'opération impossible'), true);
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Réserver maintenant';
+        submitBtn.textContent = 'Continuer';
       }
       if (confirmSendBtn) {
         confirmSendBtn.disabled = false;
         confirmSendBtn.textContent = 'Envoyer la réservation';
+      }
+      if (editReservationBtn) {
+        editReservationBtn.disabled = false;
+        editReservationBtn.textContent = 'Modifier la réservation';
       }
     }
   }
@@ -1173,9 +1204,8 @@ function initReservationPage() {
     if (!form.reportValidity()) return;
     const formData = reservationFormData();
     renderReservationReview(formData);
-    reviewBox?.classList.remove('hidden');
-    if (reviewCheckbox) reviewCheckbox.checked = false;
-    reviewBox?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    showReviewStep();
+    reviewPage?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   confirmSendBtn?.addEventListener('click', async () => {
@@ -1185,6 +1215,19 @@ function initReservationPage() {
       return;
     }
     await saveReservation();
+  });
+
+  editReservationBtn?.addEventListener('click', () => {
+    hideInlineMessage('confirmation');
+    showFormStep();
+    const firstInvalidTarget = form.querySelector('input, select, textarea');
+    firstInvalidTarget?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  newReservationBtn?.addEventListener('click', () => {
+    hideInlineMessage('confirmation');
+    showFormStep();
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }
 
