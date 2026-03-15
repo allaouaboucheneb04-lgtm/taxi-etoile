@@ -861,6 +861,10 @@ function initReservationPage() {
   const valisesInput = document.getElementById('valises');
   const vehiculeSelect = document.getElementById('vehicule');
   const submitBtn = document.getElementById('submitBtn');
+  const reviewBox = document.getElementById('reservationReviewBox');
+  const reviewContent = document.getElementById('reservationReviewContent');
+  const reviewCheckbox = document.getElementById('reviewConfirmCheckbox');
+  const confirmSendBtn = document.getElementById('confirmSendBtn');
   const allerDateInput = document.getElementById('heure');
   const retourDateInput = document.getElementById('retourHeure');
   const departInput = document.getElementById('depart');
@@ -978,36 +982,19 @@ function initReservationPage() {
   toggleRetourFields();
   suggestVehicle();
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideInlineMessage('confirmation');
+  function formatDateTimeForReview(value) {
+    if (!value) return 'Non indiqué';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('fr-CA', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    }).format(date).replace(',', ' à');
+  }
 
-    if (!db) {
-      showInlineMessage('confirmation', 'Le service n’est pas configuré.', true);
-      return;
-    }
-
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Enregistrement...';
-    }
-
-    const allerRetour = !!document.getElementById('allerRetour')?.checked;
-    const retourNotes = [];
-    const retourDepart = document.getElementById('retourDepart')?.value?.trim() || '';
-    const retourArrivee = document.getElementById('retourArrivee')?.value?.trim() || '';
-    const retourHeure = document.getElementById('retourHeure')?.value || '';
-    const retourNumeroVol = document.getElementById('retourNumeroVol')?.value?.trim() || '';
-    const retourDetails = document.getElementById('retourDetails')?.value?.trim() || '';
-    if (allerRetour) {
-      if (retourDepart) retourNotes.push(`Retour départ: ${retourDepart}`);
-      if (retourArrivee) retourNotes.push(`Retour arrivée: ${retourArrivee}`);
-      if (retourHeure) retourNotes.push(`Retour date/heure: ${retourHeure}`);
-      if (retourNumeroVol) retourNotes.push(`Vol retour: ${retourNumeroVol}`);
-      if (retourDetails) retourNotes.push(`Détails retour: ${retourDetails}`);
-    }
-
-    const baseReservation = {
+  function reservationFormData() {
+    return {
+      allerRetour: !!document.getElementById('allerRetour')?.checked,
       clientName: document.getElementById('nom')?.value?.trim() || '',
       phone: document.getElementById('telephone')?.value?.trim() || '',
       email: document.getElementById('email')?.value?.trim() || '',
@@ -1019,6 +1006,84 @@ function initReservationPage() {
       vehicleType: document.getElementById('vehicule')?.value || 'berline',
       luggage: Number(document.getElementById('valises')?.value || 0),
       notes: document.getElementById('notes')?.value?.trim() || '',
+      retourDepart: document.getElementById('retourDepart')?.value?.trim() || '',
+      retourArrivee: document.getElementById('retourArrivee')?.value?.trim() || '',
+      retourHeure: document.getElementById('retourHeure')?.value || '',
+      retourNumeroVol: document.getElementById('retourNumeroVol')?.value?.trim() || '',
+      retourDetails: document.getElementById('retourDetails')?.value?.trim() || ''
+    };
+  }
+
+  function hideReviewBox() {
+    reviewBox?.classList.add('hidden');
+    if (reviewCheckbox) reviewCheckbox.checked = false;
+  }
+
+  function renderReservationReview(data) {
+    if (!reviewContent) return;
+    const items = [
+      ['Nom', data.clientName || 'Non indiqué'],
+      ['Téléphone', data.phone || 'Non indiqué'],
+      ['Email', data.email || 'Non indiqué'],
+      ['Départ', data.pickup || 'Non indiqué'],
+      ['Arrivée', data.dropoff || 'Non indiqué'],
+      ['Date et heure', formatDateTimeForReview(data.datetime)],
+      ['Véhicule', data.vehicleType === 'van' ? 'Van' : 'Berline'],
+      ['Passagers', String(data.passengers || 1)],
+      ['Valises', String(data.luggage || 0)]
+    ];
+
+    if (data.flightNumber) items.push(['Numéro de vol', data.flightNumber]);
+    if (data.notes) items.push(['Notes', data.notes]);
+
+    if (data.allerRetour) {
+      items.push(['Type de trajet', 'Aller-retour']);
+      items.push(['Retour départ', data.retourDepart || data.dropoff || 'Non indiqué']);
+      items.push(['Retour arrivée', data.retourArrivee || data.pickup || 'Non indiqué']);
+      items.push(['Date et heure du retour', formatDateTimeForReview(data.retourHeure)]);
+      if (data.retourNumeroVol) items.push(['Vol retour', data.retourNumeroVol]);
+      if (data.retourDetails) items.push(['Notes retour', data.retourDetails]);
+    } else {
+      items.push(['Type de trajet', 'Aller simple']);
+    }
+
+    reviewContent.innerHTML = items.map(([label, value]) => `
+      <div class="reservation-review-item">
+        <span class="reservation-review-label">${escapeHtml(label)}</span>
+        <span class="reservation-review-value">${escapeHtml(value)}</span>
+      </div>`).join('');
+  }
+
+  async function saveReservation() {
+    hideInlineMessage('confirmation');
+
+    if (!db) {
+      showInlineMessage('confirmation', 'Le service n’est pas configuré.', true);
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enregistrement...';
+    }
+    if (confirmSendBtn) {
+      confirmSendBtn.disabled = true;
+      confirmSendBtn.textContent = 'Envoi en cours...';
+    }
+
+    const formData = reservationFormData();
+    const baseReservation = {
+      clientName: formData.clientName,
+      phone: formData.phone,
+      email: formData.email,
+      passengers: formData.passengers,
+      flightNumber: formData.flightNumber,
+      pickup: formData.pickup,
+      dropoff: formData.dropoff,
+      datetime: formData.datetime,
+      vehicleType: formData.vehicleType,
+      luggage: formData.luggage,
+      notes: formData.notes,
       status: 'pending',
       driverId: null,
       driverName: '',
@@ -1027,7 +1092,7 @@ function initReservationPage() {
     };
 
     try {
-      if (allerRetour) {
+      if (formData.allerRetour) {
         const groupId = `rt_${Date.now()}`;
         const reservations = db.collection(RESERVATIONS_COLLECTION);
         const allerRef = reservations.doc();
@@ -1044,11 +1109,11 @@ function initReservationPage() {
 
         batch.set(retourRef, {
           ...baseReservation,
-          flightNumber: retourNumeroVol,
-          pickup: retourDepart || baseReservation.dropoff,
-          dropoff: retourArrivee || baseReservation.pickup,
-          datetime: retourHeure || baseReservation.datetime,
-          notes: retourDetails || '',
+          flightNumber: formData.retourNumeroVol,
+          pickup: formData.retourDepart || baseReservation.dropoff,
+          dropoff: formData.retourArrivee || baseReservation.pickup,
+          datetime: formData.retourHeure || baseReservation.datetime,
+          notes: formData.retourDetails || '',
           direction: 'retour',
           groupId,
           linkedTripId: allerRef.id,
@@ -1063,37 +1128,27 @@ function initReservationPage() {
         });
       }
 
-      let emailNotice = '';
       const emailPayload = {
-        allerRetour,
-        retourDepart,
-        retourArrivee,
-        retourHeure,
-        retourNumeroVol,
-        retourDetails
+        allerRetour: formData.allerRetour,
+        retourDepart: formData.retourDepart,
+        retourArrivee: formData.retourArrivee,
+        retourHeure: formData.retourHeure,
+        retourNumeroVol: formData.retourNumeroVol,
+        retourDetails: formData.retourDetails
       };
+
       try {
-        const emailResults = [];
         await sendAdminReservationEmail(baseReservation, emailPayload);
-        emailResults.push('email admin envoyé');
-
-        const clientResult = await sendClientConfirmationEmail(baseReservation, emailPayload);
-        if (clientResult?.skipped) {
-          emailResults.push('pas d’email client saisi');
-        } else {
-          emailResults.push('email client envoyé');
-        }
-
-        emailNotice = ' ' + emailResults.join(' • ') + '.';
+        await sendClientConfirmationEmail(baseReservation, emailPayload);
       } catch (emailError) {
         console.error('EmailJS send error:', emailError);
-        emailNotice = ` Réservation enregistrée, mais email non envoyé: ${emailError?.text || emailError?.message || 'vérifie EmailJS'}.`;
       }
 
       form.reset();
+      hideReviewBox();
       toggleRetourFields();
       suggestVehicle();
-      showInlineMessage('confirmation', '✅ Réservation envoyée avec succès.' + emailNotice, false);
+      showInlineMessage('confirmation', '✅ Réservation confirmée. Un email de confirmation vous sera envoyé.', false);
     } catch (error) {
       showInlineMessage('confirmation', 'Erreur d’enregistrement : ' + (error.message || 'opération impossible'), true);
     } finally {
@@ -1101,7 +1156,35 @@ function initReservationPage() {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Réserver maintenant';
       }
+      if (confirmSendBtn) {
+        confirmSendBtn.disabled = false;
+        confirmSendBtn.textContent = 'Envoyer la réservation';
+      }
     }
+  }
+
+  form.addEventListener('input', () => {
+    hideInlineMessage('confirmation');
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    hideInlineMessage('confirmation');
+    if (!form.reportValidity()) return;
+    const formData = reservationFormData();
+    renderReservationReview(formData);
+    reviewBox?.classList.remove('hidden');
+    if (reviewCheckbox) reviewCheckbox.checked = false;
+    reviewBox?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  confirmSendBtn?.addEventListener('click', async () => {
+    if (!reviewCheckbox?.checked) {
+      showInlineMessage('confirmation', 'Veuillez cocher la confirmation avant d’envoyer la réservation.', true);
+      reviewCheckbox?.focus();
+      return;
+    }
+    await saveReservation();
   });
 }
 

@@ -1653,3 +1653,14 @@ body.admin-sidebar-open .admin-sidebar-overlay{opacity:1;pointer-events:auto}
   .page-sections{padding:0 .85rem;}
   .container.form-card{margin:1rem .85rem 0;}
 }
+
+
+.reservation-review-box{margin-top:16px;padding:18px;border:2px solid rgba(201,155,0,.22);border-radius:18px;background:#fff7df;box-shadow:0 10px 25px rgba(0,0,0,.06)}
+.reservation-review-box h3{margin:0 0 12px;color:#111827}
+.reservation-review-content{display:grid;gap:10px;margin-bottom:14px}
+.reservation-review-item{background:#fff;border:1px solid rgba(201,155,0,.2);border-radius:14px;padding:10px 12px}
+.reservation-review-label{display:block;font-size:.85rem;font-weight:700;color:#8a6a00;margin-bottom:4px}
+.reservation-review-value{display:block;color:#1f2937;word-break:break-word}
+.review-checkbox-line{margin:12px 0;font-weight:700}
+#confirmSendBtn{width:100%;margin-top:4px;background:#0b1639;color:#fff;border:none;border-radius:14px;padding:15px 18px;font-size:1.08rem;font-weight:800;cursor:pointer;box-shadow:0 12px 24px rgba(11,22,57,.18)}
+#confirmSendBtn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
