@@ -4,4 +4,4 @@ window.EMAILJS_TEMPLATE_ID = 'template_06gymkw';
 window.EMAILJS_ADMIN_TEMPLATE_ID = 'template_06gymkw';
 window.EMAILJS_CLIENT_TEMPLATE_ID = 'template_57gauxj';
 window.TAXI_APP_INSTALL_URL = 'https://taxilivesoreltracy.com/';
-window.TAXI_GOOGLE_REVIEW_URL = 'https://www.google.com/search?q=Taxi+Live+Sorel-Tracy+avis';
+window.TAXI_GOOGLE_REVIEW_URL = 'https://g.page/r/CcI9bPq7WBKBEBM/review';
