@@ -1176,6 +1176,13 @@ function initReservationPage() {
       suggestVehicle();
       showInlineMessage('confirmation', 'Réservation confirmée. Un email de confirmation vous sera envoyé.', false);
       showSuccessStep();
+      // Après confirmation, amener immédiatement le client sur la carte de succès.
+      // Deux frames permettent au navigateur d'appliquer l'affichage avant le défilement.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          successPage?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
     } catch (error) {
       showInlineMessage('confirmation', 'Erreur d’enregistrement : ' + (error.message || 'opération impossible'), true);
     } finally {
