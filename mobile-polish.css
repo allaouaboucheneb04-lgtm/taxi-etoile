@@ -27,3 +27,19 @@ html{scroll-behavior:smooth;scroll-padding-top:90px}
 @media(max-width:800px){.pro-home .pro-hero h1{overflow-wrap:normal;letter-spacing:-.035em}.pro-home .pro-booking-card{box-shadow:0 16px 45px rgba(8,26,49,.1)}.pro-home .pro-steps{overflow-x:auto}.pro-home .pro-next,.pro-home .pro-back,.pro-home .pro-submit{min-height:52px}.pro-home .mobile-sticky-actions{z-index:1000}}
 @media(max-width:380px){.pro-home .pro-hero h1{font-size:37px!important}.pro-home .pro-hero-actions{gap:8px!important}.pro-home .pro-btn{font-size:14px!important;padding-inline:10px!important}.pro-home .pro-trust{gap:10px!important}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.pro-home *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+/* Deuxième amélioration : navigation mobile native sans JavaScript */
+.taxi-mobile-menu{display:none}
+@media(max-width:800px){
+ .pro-home .pro-header{gap:10px!important}
+ .pro-home .pro-brand{margin-right:auto;min-width:0}
+ .taxi-mobile-menu{display:block;position:relative;z-index:1200}
+ .taxi-mobile-menu summary{display:flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:0 12px;background:#f5c400;color:#081a31;border-radius:12px;font-weight:850;font-size:14px;cursor:pointer;list-style:none}
+ .taxi-mobile-menu summary::-webkit-details-marker{display:none}
+ .taxi-mobile-menu summary:focus-visible{outline:3px solid #f5c400;outline-offset:3px}
+ .taxi-mobile-menu[open] summary{border-radius:12px 12px 0 0}
+ .taxi-mobile-menu nav{position:absolute;right:0;top:calc(100% - 1px);width:min(310px,calc(100vw - 28px));padding:9px;background:#fff;border:1px solid #e1e7ee;border-radius:15px 0 15px 15px;box-shadow:0 18px 45px rgba(8,26,49,.22);display:flex;flex-direction:column}
+ .taxi-mobile-menu nav a{display:block;padding:13px 14px;border-radius:9px;color:#10233c;text-decoration:none;font-size:16px;font-weight:700}
+ .taxi-mobile-menu nav a:focus-visible,.taxi-mobile-menu nav a:hover{background:#fff5cc}
+}
+@media(max-width:380px){.taxi-mobile-menu summary{padding:0 9px;font-size:13px}.taxi-mobile-menu summary span{display:none}}
