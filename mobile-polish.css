@@ -15,3 +15,15 @@
  .pro-about-strip h2{font-size:30px!important}.pro-airport{margin:28px 12px!important}.pro-airport>div{padding:23px 20px 20px!important}.pro-airport h2{font-size:28px!important}.pro-airport p{font-size:17px!important}.pro-airport img{height:210px!important;min-height:210px!important;max-height:210px!important;object-fit:cover!important;object-position:center 45%!important}
  .pro-footer{grid-template-columns:1.15fr .85fr!important;padding:20px 18px 16px!important;gap:16px!important;min-height:0!important;height:auto!important}.pro-footer-brand{grid-column:1/-1!important;padding-bottom:13px!important}.pro-footer>div:not(.pro-footer-brand){border:0!important;padding-top:0!important}.pro-footer a,.pro-footer span{font-size:17px!important}.pro-footer>div:not(.pro-footer-brand)>strong{font-size:20px!important}.pro-footer-bottom{font-size:15px!important;padding:11px 10px calc(82px + env(safe-area-inset-bottom))!important;min-height:0!important;height:auto!important}
 }
+/* UI UX Pro Max — finition accessible, cohérente et mobile-first */
+:root{--taxi-focus:#ffca38}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+.pro-home :is(a,button,input,select,textarea):focus-visible{outline:3px solid var(--taxi-focus)!important;outline-offset:3px!important}
+.pro-home :is(button,a){-webkit-tap-highlight-color:transparent}
+.pro-home .pro-btn,.pro-home .pro-next,.pro-home .pro-back,.pro-home .pro-submit,.pro-home .quick-destination-btn{transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease}
+@media(hover:hover){.pro-home .pro-btn:hover,.pro-home .pro-next:hover,.pro-home .pro-submit:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(8,26,49,.19)}}
+.pro-home .pro-field input,.pro-home .pro-field select,.pro-home .pro-field textarea{max-width:100%;box-sizing:border-box}
+.pro-home .pro-field input:focus,.pro-home .pro-field textarea:focus,.pro-home .pro-field select:focus{border-color:#b88400;box-shadow:0 0 0 3px rgba(255,202,56,.18)}
+@media(max-width:800px){.pro-home .pro-hero h1{overflow-wrap:normal;letter-spacing:-.035em}.pro-home .pro-booking-card{box-shadow:0 16px 45px rgba(8,26,49,.1)}.pro-home .pro-steps{overflow-x:auto}.pro-home .pro-next,.pro-home .pro-back,.pro-home .pro-submit{min-height:52px}.pro-home .mobile-sticky-actions{z-index:1000}}
+@media(max-width:380px){.pro-home .pro-hero h1{font-size:37px!important}.pro-home .pro-hero-actions{gap:8px!important}.pro-home .pro-btn{font-size:14px!important;padding-inline:10px!important}.pro-home .pro-trust{gap:10px!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.pro-home *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
